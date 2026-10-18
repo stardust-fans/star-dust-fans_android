@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.stardust.fans'
+    compileSdk 34
+    // 显式指定已安装的版本，避免 AGP 去下载默认的 34.0.0
+    buildToolsVersion '36.0.0'
+
+    defaultConfig {
+        applicationId 'com.stardust.fans'
+        minSdk 23
+        targetSdk 34
+        versionCode 3
+        versionName '1.1.1'
+    }
+
+    buildTypes {
+        debug {
+            // 自用安装：debug 直接用 debug 签名即可
+        }
+        release {
+            minifyEnabled false
+            // 没有自建 release keystore 时，release 也用 debug 签名，保证能直接装
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        abortOnError false
+    }
+}

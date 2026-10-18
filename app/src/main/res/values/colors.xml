@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#07070D</color>
+    <color name="card_background">#12131F</color>
+    <color name="text_primary">#E7E8F2</color>
+    <color name="text_muted">#85889F</color>
+    <color name="accent">#9999FF</color>
+    <color name="divider">#22BEC1E0</color>
+
+    <!-- 顶栏 / 底部 dock -->
+    <color name="search_bg">#161726</color>
+    <color name="search_hint">#7B7E9C</color>
+    <color name="dock_bg">#0B0B14</color>
+    <color name="dock_inactive">#6F7292</color>
+    <color name="dock_active">#9999FF</color>
+    <color name="avatar_ring">#559999FF</color>
+</resources>

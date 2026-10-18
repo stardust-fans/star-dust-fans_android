@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/app_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- ===== 顶栏：头像 + 搜索框 + 设置 ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp">
+
+            <ImageView
+                android:id="@+id/top_avatar"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_avatar"
+                android:contentDescription="我的"
+                android:padding="6dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_avatar_placeholder" />
+
+            <TextView
+                android:id="@+id/top_search"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_search"
+                android:clickable="true"
+                android:drawableStart="@drawable/ic_search"
+                android:drawablePadding="8dp"
+                android:drawableTint="@color/search_hint"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="搜索星尘…"
+                android:textColor="@color/search_hint"
+                android:textSize="13sp" />
+
+            <ImageView
+                android:id="@+id/top_settings"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="推送设置"
+                android:padding="9dp"
+                android:src="@drawable/ic_settings"
+                android:tint="@color/dock_inactive" />
+        </LinearLayout>
+
+        <!-- ===== 内容区 ===== -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <WebView
+                android:id="@+id/web_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="@android:style/Widget.Material.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:layout_gravity="top"
+                android:max="100"
+                android:progressTint="@color/accent"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/error_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/app_background"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/error_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:lineSpacingExtra="6dp"
+                    android:text="网络似乎不太顺畅"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/error_retry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="重试"
+                    android:textColor="@color/accent" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- ===== 底部 dock ===== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:background="@color/dock_bg"
+            android:orientation="horizontal"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
+
+            <TextView
+                android:id="@+id/tab_videos"
+                style="@style/DockItem"
+                android:drawableTop="@drawable/ic_tab_videos"
+                android:text="视频" />
+
+            <TextView
+                android:id="@+id/tab_fanart"
+                style="@style/DockItem"
+                android:drawableTop="@drawable/ic_tab_fanart"
+                android:text="同人" />
+
+            <TextView
+                android:id="@+id/tab_shop"
+                style="@style/DockItem"
+                android:drawableTop="@drawable/ic_tab_shop"
+                android:text="量贩" />
+
+            <TextView
+                android:id="@+id/tab_forum"
+                style="@style/DockItem"
+                android:drawableTop="@drawable/ic_tab_forum"
+                android:text="论坛" />
+
+            <TextView
+                android:id="@+id/tab_my"
+                style="@style/DockItem"
+                android:drawableTop="@drawable/ic_tab_my"
+                android:text="我的" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
