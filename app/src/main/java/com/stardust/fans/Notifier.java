@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
 
 import java.util.List;
 
@@ -26,6 +27,14 @@ final class Notifier {
     }
 
     static void ensureChannels(Context context) {
+        try {
+            ensureChannelsInternal(context);
+        } catch (Exception e) {
+            Log.w("StarDustNotify", "ensureChannels failed", e);
+        }
+    }
+
+    private static void ensureChannelsInternal(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return;
         }

@@ -39,8 +39,19 @@ final class Scheduler {
 
     /**
      * 重排下一次轮询。设置变更（开关/频率）与每轮结束后都会调用，可重复调用。
+     *
+     * 调度只是辅助功能，失败不应该拖垮 App：这里兜一层异常（例如某些 ROM 对
+     * JobScheduler 的校验更严会抛 SecurityException）。
      */
     static void reschedule(Context context) {
+        try {
+            rescheduleInternal(context);
+        } catch (Exception e) {
+            Log.e(TAG, "reschedule failed", e);
+        }
+    }
+
+    private static void rescheduleInternal(Context context) {
         Context app = context.getApplicationContext();
         Prefs prefs = new Prefs(app);
 

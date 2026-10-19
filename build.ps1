@@ -40,8 +40,8 @@ if ($PSScriptRoot) {
 $Package     = 'com.stardust.fans'
 $MinSdk      = 23
 $TargetSdk   = 34
-$VersionCode = 3
-$VersionName = '1.1.1'
+$VersionCode = 5
+$VersionName = '1.2.1'
 $ApkName     = 'star-dust-mobile.apk'
 
 $BuildToolsUrl = 'https://dl.google.com/android/repository/build-tools_r36_windows.zip'

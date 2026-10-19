@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- JobInfo 用了「需要联网」约束，Android 14+ 强制校验此权限 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -11,6 +13,7 @@
         android:targetSdkVersion="34" />
 
     <application
+        android:name=".App"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -40,6 +43,11 @@
             android:name=".SearchActivity"
             android:exported="false"
             android:windowSoftInputMode="stateVisible|adjustResize" />
+
+        <activity
+            android:name=".CrashReportActivity"
+            android:exported="false"
+            android:label="崩溃信息" />
 
         <receiver
             android:name=".PollReceiver"
