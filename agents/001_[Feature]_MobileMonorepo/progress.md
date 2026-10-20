@@ -11,3 +11,8 @@
 - 合并 Android 和 Apple 初稿提交；运行 Android 导航测试通过。
 - 独立 SDK 下真实构建 Android 初稿成功（104.8KB，调试签名）。待版本与审查修复后重建交付。
 - 完成首轮 Apple 独立复核，把具体运行和编译问题返回子任务；增加 iPhone/iPad 双目的地 CI 测试和模拟器 app 工件。
+- Android 最终增量修复 API23 popup、全屏媒体、扩展名/多文件选择、附件浏览器下载、邮件链接及搜索过期回调；删除不可用机器路径图标脚本，发布构建不再回退调试签名。
+- 不设置 JAVA_HOME 的完整 Android1.3.0/code6 构建通过，证明 Oracle shim 发现修复有效；导航测试与 7 项固定来源契约测试通过。
+- 调试 APK 复制到用户 outputs/stardust-mobile-1.3.0-debug.apk，SHA256 CF09FF7F9CCE40C3CCDAAEA66F660E27E76F67837B4CEFE407C1E8E9999E60D9。
+- Apple 三轮修复合并：生命周期、脚本注入、并发/基线、后台任务、文件/邮件、搜索错误、冷启动深链优先级、前台通知展示；独立复核确认已知问题得到修复。
+- 推送集成分支以运行真实 macOS CI；先前运行因后续修复被 supersede/cancel。没有创建 PR、没有更改生产网站或数据库。
