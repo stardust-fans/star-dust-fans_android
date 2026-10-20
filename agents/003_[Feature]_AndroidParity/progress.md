@@ -9,3 +9,7 @@
 - Updated native song search to use contract endpoints, query the server, parse nested owner names, validate BVIDs, and open the selected Bilibili video URL through ACTION_VIEW.
 - Added pure Java URL policy tests and Windows/Unix runners under root `test/android`.
 - Verified the pure Java test suite, PowerShell syntax, Android layout XML parsing, and `git diff --check`. Full APK build is deferred to the parent integration because this worktree does not yet contain the shared contract or Android SDK.
+- Follow-up: added Android 6 legacy popup navigation with user-gesture gating and one-time popup cleanup; added fullscreen WebView media handling with Back exit; normalized extension-list file chooser filters; routed canonical attachment downloads to the system browser and mailto links to a mail app; guarded asynchronous search by generation.
+- Updated app/build metadata to 1.3.0/code 6, removed release debug signing and lint suppression, improved Java-home resolution, and hardened temporary test cleanup.
+- Removed the two unused icon generators that depend on a non-portable workstation path; kept checked-in artwork.
+- Validation: `test/android/run-navigation-policy.ps1` passed; PowerShell parser/JDK resolution, Android layout XML parsing, and `git diff --check` passed. Full Android APK build awaits parent integration tree.

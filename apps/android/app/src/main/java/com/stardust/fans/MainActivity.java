@@ -27,7 +27,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.JavascriptInterface;
+import android.webkit.DownloadListener;
+import android.webkit.MimeTypeMap;
 import android.os.Message;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -36,12 +39,6 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.content.ClipData;
 
-/**
- * 主界面：原生顶栏与页面菜单、WebView 内容和五项原生导航。
- *
- * 内容仍然是站点本身（不打包前端副本），这样登录 cookie、投稿、评论、上传都天然可用；
- * 原生层负责 App 的外观与导航，并把站点自带的导航栏隐藏掉，避免两层导航。
- */
 public final class MainActivity extends Activity {
     private static final String TAG = "StarDustMain";
     private static final String BASE = ApiClient.BASE;
@@ -55,6 +52,10 @@ public final class MainActivity extends Activity {
     private TextView errorText;
     private ImageView avatarView;
     private LinearLayout dock;
+    private View appLayout;
+    private View fullscreenView;
+    private WebChromeClient.CustomViewCallback fullscreenCallback;
+    private int originalSystemUiVisibility;
     private SiteContract contract;
 
     private ValueCallback<Uri[]> pendingFileCallback;
@@ -63,10 +64,6 @@ public final class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable foregroundPoll;
 
-    /**
-     * 前台定时轮询：网络请求必须离开主线程。
-     * 具名内部类（而不是字段初始化器里的匿名类），避免 d8 处理 EnclosingMethod 为 null 的类。
-     */
     private final class ForegroundPoll implements Runnable {
         @Override
         public void run() {
@@ -90,6 +87,7 @@ public final class MainActivity extends Activity {
         errorText = findViewById(R.id.error_text);
         avatarView = findViewById(R.id.top_avatar);
         dock = findViewById(R.id.bottom_dock);
+        appLayout = findViewById(R.id.app_layout);
 
         try {
             contract = SiteContract.load(this);
@@ -122,8 +120,6 @@ public final class MainActivity extends Activity {
         }
     }
 
-    // ---------------------------------------------------------------- 顶栏 / dock
-
     private void setupTopBar() {
         avatarView.setClipToOutline(true);
         avatarView.setOutlineProvider(new ViewOutlineProvider() {
@@ -132,7 +128,6 @@ public final class MainActivity extends Activity {
                 outline.setOval(0, 0, view.getWidth(), view.getHeight());
             }
         });
-        // 头像打开契约定义的用户页。
         avatarView.setOnClickListener(v -> selectAccountTab());
 
         findViewById(R.id.top_search).setOnClickListener(v ->
@@ -190,7 +185,6 @@ public final class MainActivity extends Activity {
         }
     }
 
-    /** 根据当前 URL 反推高亮哪个 dock 项（通知深链、页面跳转后调用） */
     private void syncTabFromUrl(String url) {
         if (url == null || contract == null) return;
         for (int i = 0; i < contract.tabs.size(); i++) {
@@ -238,8 +232,6 @@ public final class MainActivity extends Activity {
     private void openSettings() {
         startActivity(new Intent(this, SettingsActivity.class));
     }
-
-    // ---------------------------------------------------------------- 头像
 
     private void loadAvatar() {
         new Thread(() -> {
@@ -289,8 +281,6 @@ public final class MainActivity extends Activity {
         return null;
     }
 
-    // ---------------------------------------------------------------- WebView
-
     @SuppressLint("SetJavaScriptEnabled")
     private void configureWebView() {
         WebSettings settings = webView.getSettings();
@@ -314,6 +304,15 @@ public final class MainActivity extends Activity {
         cookieManager.flush();
 
         webView.addJavascriptInterface(new NavigationBridge(), "StarDustNavigation");
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
+            if (NavigationPolicy.isSiteAttachmentDownload(url)) {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(this, "无法打开附件下载", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -377,10 +376,25 @@ public final class MainActivity extends Activity {
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
                     String[] accepted = params.getAcceptTypes();
                     java.util.ArrayList<String> types = new java.util.ArrayList<>();
+                    boolean unknownType = false;
                     if (accepted != null) for (String type : accepted) {
-                        if (type != null && !type.trim().isEmpty()) types.add(type.trim());
+                        if (type == null) continue;
+                        for (String value : type.split(",")) {
+                            String accept = value.trim().toLowerCase(java.util.Locale.ROOT);
+                            if (accept.isEmpty()) continue;
+                            if (accept.startsWith(".")) {
+                                String mapped = MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+                                        accept.substring(1));
+                                if (mapped == null) unknownType = true;
+                                else if (!types.contains(mapped)) types.add(mapped);
+                            } else if (accept.matches("[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+*-]+")) {
+                                if (!types.contains(accept)) types.add(accept);
+                            } else {
+                                unknownType = true;
+                            }
+                        }
                     }
-                    if (types.isEmpty() || types.contains("*/*")) {
+                    if (types.isEmpty() || types.contains("*/*") || unknownType) {
                         intent.setType("*/*");
                     } else if (types.size() == 1) {
                         intent.setType(types.get(0));
@@ -405,23 +419,39 @@ public final class MainActivity extends Activity {
             }
 
             @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                showFullscreenView(view, callback);
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public void onShowCustomView(View view, int requestedOrientation, CustomViewCallback callback) {
+                showFullscreenView(view, callback);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                hideFullscreenView();
+            }
+
+            @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture,
                                           Message resultMsg) {
+                if (!isUserGesture) return false;
                 WebView popup = new WebView(MainActivity.this);
                 popup.getSettings().setJavaScriptEnabled(true);
                 popup.setWebViewClient(new WebViewClient() {
+                    private final boolean[] handled = {false};
+
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView popupView, WebResourceRequest request) {
-                        Uri uri = request.getUrl();
-                        if (request.isForMainFrame()) {
-                            if (NavigationPolicy.isInternalMainFrame(uri.toString())) {
-                                webView.loadUrl(uri.toString());
-                            } else {
-                                handleUrl(uri, true);
-                            }
-                        }
-                        popupView.destroy();
-                        return true;
+                        return request.isForMainFrame() && routePopupNavigation(popupView, request.getUrl(), handled);
+                    }
+
+                    @Override
+                    @SuppressWarnings("deprecation")
+                    public boolean shouldOverrideUrlLoading(WebView popupView, String url) {
+                        return routePopupNavigation(popupView, Uri.parse(url), handled);
                     }
                 });
                 WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
@@ -430,6 +460,66 @@ public final class MainActivity extends Activity {
                 return true;
             }
         });
+    }
+
+    private boolean routePopupNavigation(WebView popup, Uri uri, boolean[] handled) {
+        if (handled[0]) return true;
+        handled[0] = true;
+        try {
+            if (uri == null) return true;
+            if (NavigationPolicy.isInternalMainFrame(uri.toString())) {
+                webView.loadUrl(uri.toString());
+            } else {
+                handleUrl(uri, true);
+            }
+        } finally {
+            popup.destroy();
+        }
+        return true;
+    }
+
+    private void showFullscreenView(View view, WebChromeClient.CustomViewCallback callback) {
+        if (fullscreenView != null) {
+            callback.onCustomViewHidden();
+            return;
+        }
+        fullscreenView = view;
+        fullscreenCallback = callback;
+        originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+        appLayout.setVisibility(View.GONE);
+        FrameLayout content = findViewById(android.R.id.content);
+        content.addView(view, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        applyFullscreenSystemUi();
+    }
+
+    private void hideFullscreenView() {
+        if (fullscreenView == null) return;
+        View view = fullscreenView;
+        fullscreenView = null;
+        ViewGroup parent = (ViewGroup) view.getParent();
+        if (parent != null) parent.removeView(view);
+        appLayout.setVisibility(View.VISIBLE);
+        getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+        WebChromeClient.CustomViewCallback callback = fullscreenCallback;
+        fullscreenCallback = null;
+        if (callback != null) callback.onCustomViewHidden();
+    }
+
+    private void applyFullscreenSystemUi() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && fullscreenView != null) applyFullscreenSystemUi();
     }
 
     private String chromeScript() {
@@ -464,6 +554,16 @@ public final class MainActivity extends Activity {
         if (!mainFrame) return false;
         String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
         if (NavigationPolicy.isInternalMainFrame(uri.toString())) return false;
+        if ("mailto".equals(scheme) && !uri.isHierarchical()
+                && uri.getSchemeSpecificPart() != null && !uri.getSchemeSpecificPart().trim().isEmpty()
+                && !uri.getSchemeSpecificPart().contains("\r") && !uri.getSchemeSpecificPart().contains("\n")) {
+            try {
+                startActivity(new Intent(Intent.ACTION_SENDTO, uri));
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(this, "没有可用的邮件应用", Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        }
         if ((!"http".equals(scheme) && !"https".equals(scheme))
                 || uri.getHost() == null || uri.getUserInfo() != null || uri.getPort() != -1) return true;
         try {
@@ -481,8 +581,6 @@ public final class MainActivity extends Activity {
         errorView.setVisibility(View.VISIBLE);
         errorText.setText("网络似乎不太顺畅\n请检查连接后重试");
     }
-
-    // ---------------------------------------------------------------- 生命周期 / 交互
 
     private static String resolveDeepLink(Intent intent) {
         if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -536,6 +634,10 @@ public final class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        if (fullscreenView != null) {
+            hideFullscreenView();
+            return;
+        }
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
@@ -576,6 +678,7 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (fullscreenView != null) hideFullscreenView();
         if (foregroundPoll != null) {
             handler.removeCallbacks(foregroundPoll);
         }

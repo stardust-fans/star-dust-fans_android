@@ -18,15 +18,13 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 搜索站点公开视频、同人和量贩内容；视频结果打开对应视频，其余结果留在站点内。
- */
 public final class SearchActivity extends Activity {
     private EditText input;
     private ListView listView;
     private TextView status;
     private ResultAdapter adapter;
     private SiteContract contract;
+    private int searchGeneration;
 
     private final List<ApiClient.SearchResult> results = new ArrayList<>();
 
@@ -74,6 +72,7 @@ public final class SearchActivity extends Activity {
     }
 
     private void doSearch(String rawQuery) {
+        final int generation = ++searchGeneration;
         final String query = rawQuery == null ? "" : rawQuery.trim();
         if (query.isEmpty()) {
             results.clear();
@@ -89,6 +88,7 @@ public final class SearchActivity extends Activity {
         new Thread(() -> {
             final List<ApiClient.SearchResult> found = ApiClient.search(query, contract);
             runOnUiThread(() -> {
+                if (generation != searchGeneration || isFinishing() || isDestroyed()) return;
                 results.clear();
                 results.addAll(found);
                 adapter.notifyDataSetChanged();
@@ -101,6 +101,12 @@ public final class SearchActivity extends Activity {
                 }
             });
         }, "stardust-search").start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        searchGeneration++;
+        super.onDestroy();
     }
 
     private void openResult(ApiClient.SearchResult result) {
