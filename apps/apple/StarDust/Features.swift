@@ -10,6 +10,10 @@ struct SearchHit: Identifiable, Sendable {
     let path: String
     var displayKind: String { kind == "Videos" ? "视频" : (kind == "Fanart" ? "同人" : "量贩") }
 }
+private struct SearchFetchResult: Sendable {
+    let hits: [SearchHit]
+    let failed: Bool
+}
 struct SearchView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -44,42 +48,53 @@ struct SearchView: View {
             return (feed.id == "fanart" ? "Fanart" : "Shop", feed.path, feed.detailPath)
         }
         var all: [SearchHit] = []
-        await withTaskGroup(of: [SearchHit].self) { group in
+        var hadFailure = false
+        await withTaskGroup(of: SearchFetchResult.self) { group in
             for (kind, path, detailPath) in endpoints { group.addTask { await Self.fetch(kind: kind, path: path, detailPath: detailPath, base: base, query: term) } }
-            for await values in group { all.append(contentsOf: values) }
+            for await result in group {
+                all.append(contentsOf: result.hits)
+                hadFailure = hadFailure || result.failed
+            }
         }
         guard !Task.isCancelled else { return }
-        hits = Array(all.prefix(60)); busy = false; message = hits.isEmpty ? "没有找到匹配内容" : ""
+        hits = Array(all.prefix(60)); busy = false
+        if hadFailure { message = hits.isEmpty ? "搜索服务暂不可用，请稍后重试" : "部分搜索来源暂不可用" }
+        else { message = hits.isEmpty ? "没有找到匹配内容" : "" }
     }
-    nonisolated private static func fetch(kind: String, path: String, detailPath: String?, base: URL, query: String) async -> [SearchHit] {
-        guard let endpoint = URL(string: path, relativeTo: base)?.absoluteURL else { return [] }
+    nonisolated private static func fetch(kind: String, path: String, detailPath: String?, base: URL, query: String) async -> SearchFetchResult {
+        guard let endpoint = URL(string: path, relativeTo: base)?.absoluteURL else { return SearchFetchResult(hits: [], failed: true) }
         do {
             var requestURL = endpoint
             if kind == "Videos" {
-                guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { return [] }
+                guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { return SearchFetchResult(hits: [], failed: true) }
                 components.queryItems = [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: "20"), URLQueryItem(name: "offset", value: "0")]
-                guard let encoded = components.url else { return [] }
+                guard let encoded = components.url else { return SearchFetchResult(hits: [], failed: true) }
                 requestURL = encoded
-                let (data, _) = try await URLSession.shared.data(from: requestURL)
+                let (data, response) = try await URLSession.shared.data(from: requestURL)
+                guard (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) == true else { return SearchFetchResult(hits: [], failed: true) }
                 let records = try JSONDecoder().decode([VideoSearchRecord].self, from: data)
-                return records.compactMap { record in
+                let hits = records.compactMap { record in
                     guard record.title.localizedCaseInsensitiveContains(query) || record.bvid.localizedCaseInsensitiveContains(query) || (record.owner?.name ?? "").localizedCaseInsensitiveContains(query),
                           !record.bvid.isEmpty else { return nil }
                     return SearchHit(kind: kind, title: record.title, subtitle: record.owner?.name ?? "", path: "https://www.bilibili.com/video/\(record.bvid)")
                 }
+                return SearchFetchResult(hits: hits, failed: false)
             }
-            guard let detailPath else { return [] }
-            let (data, _) = try await URLSession.shared.data(from: requestURL)
-            guard let array = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+            guard let detailPath else { return SearchFetchResult(hits: [], failed: true) }
+            let (data, response) = try await URLSession.shared.data(from: requestURL)
+            guard (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) == true,
+                  let array = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return SearchFetchResult(hits: [], failed: true) }
             let needle = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            return array.compactMap { item in
+            let hits = array.compactMap { item in
                 let title = item["title"] as? String ?? ""
                 let subtitle = kind == "Fanart" ? (item["author"] as? String ?? "") : String(describing: item["price"] ?? "")
                 guard (title + " " + subtitle).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) else { return nil }
                 let id = item["id"] as? Int ?? 0
+                guard id > 0 else { return nil }
                 return SearchHit(kind: kind, title: title, subtitle: subtitle, path: SearchDestination.detail(prefix: detailPath, itemID: id))
             }
-        } catch { return [] }
+            return SearchFetchResult(hits: hits, failed: false)
+        } catch { return SearchFetchResult(hits: [], failed: true) }
     }
 }
 struct PageDirectoryView: View {

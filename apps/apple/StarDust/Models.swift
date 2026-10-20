@@ -113,6 +113,20 @@ enum SearchDestination {
     }
 }
 
+struct NavigationRequestState {
+    private(set) var hasRequest = false
+
+    mutating func claimInitialRequest() -> Bool {
+        guard !hasRequest else { return false }
+        hasRequest = true
+        return true
+    }
+
+    mutating func recordRequest() {
+        hasRequest = true
+    }
+}
+
 
 struct VideoSearchRecord: Decodable {
     struct Owner: Decodable { let name: String? }
