@@ -1,0 +1,47 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1; classes = {}; objectVersion = 56;
+ objects = {
+ A00000000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000021; buildPhases = (A00000000000000000000031, A00000000000000000000032, A00000000000000000000033,); buildRules = (); dependencies = (); name = StarDust; productName = StarDust; productReference = A00000000000000000000041; productType = "com.apple.product-type.application"; };
+ A00000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000022; buildPhases = (A00000000000000000000034, A00000000000000000000035, A00000000000000000000036,); buildRules = (); dependencies = (A00000000000000000000051,); name = StarDustTests; productName = StarDustTests; productReference = A00000000000000000000042; productType = "com.apple.product-type.bundle.unit-test"; };
+ A00000000000000000000010 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 1600; TargetAttributes = {A00000000000000000000001 = {CreatedOnToolsVersion = 16.0;}; A00000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = A00000000000000000000001;};};}; buildConfigurationList = A00000000000000000000020; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base,); mainGroup = A00000000000000000000060; productRefGroup = A00000000000000000000061; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000001, A00000000000000000000002,); };
+ A00000000000000000000020 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000023, A00000000000000000000024,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+ A00000000000000000000021 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000025, A00000000000000000000026,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+ A00000000000000000000022 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000027, A00000000000000000000028,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+ A00000000000000000000023 = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; }; name = Debug; };
+ A00000000000000000000024 = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; }; name = Release; };
+ A00000000000000000000025 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = StarDust/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = top.stardustinfinity.mobile; PRODUCT_NAME = "$(TARGET_NAME)"; TARGETED_DEVICE_FAMILY = "1,2"; SWIFT_VERSION = 5.0; }; name = Debug; };
+ A00000000000000000000026 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = StarDust/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = top.stardustinfinity.mobile; PRODUCT_NAME = "$(TARGET_NAME)"; TARGETED_DEVICE_FAMILY = "1,2"; SWIFT_VERSION = 5.0; }; name = Release; };
+ A00000000000000000000027 = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = top.stardustinfinity.mobile.tests; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StarDust.app/StarDust"; }; name = Debug; };
+ A00000000000000000000028 = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = top.stardustinfinity.mobile.tests; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StarDust.app/StarDust"; }; name = Release; };
+ A00000000000000000000031 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000070, A00000000000000000000075, A00000000000000000000071,); runOnlyForDeploymentPostprocessing = 0; };
+ A00000000000000000000032 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+ A00000000000000000000033 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000072, A00000000000000000000073,); runOnlyForDeploymentPostprocessing = 0; };
+ A00000000000000000000034 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000074,); runOnlyForDeploymentPostprocessing = 0; };
+ A00000000000000000000035 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+ A00000000000000000000036 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+ A00000000000000000000041 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StarDust.app; sourceTree = BUILT_PRODUCTS_DIR; };
+ A00000000000000000000042 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StarDustTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+ A00000000000000000000043 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+ A00000000000000000000044 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features.swift; sourceTree = "<group>"; };
+ A00000000000000000000045 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+ A00000000000000000000046 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+ A00000000000000000000047 = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+ A00000000000000000000048 = {isa = PBXFileReference; lastKnownFileType = text.json; name = site.json; path = ../../packages/site-contract/site.json; sourceTree = SOURCE_ROOT; };
+ A00000000000000000000049 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NavigationTests.swift; path = ../../test/apple/NavigationTests.swift; sourceTree = SOURCE_ROOT; };
+ A00000000000000000000050 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+ A00000000000000000000051 = {isa = PBXTargetDependency; target = A00000000000000000000001; targetProxy = A00000000000000000000052; };
+ A00000000000000000000052 = {isa = PBXContainerItemProxy; containerPortal = A00000000000000000000010; proxyType = 1; remoteGlobalIDString = A00000000000000000000001; remoteInfo = StarDust; };
+ A00000000000000000000060 = {isa = PBXGroup; children = (A00000000000000000000062, A00000000000000000000063, A00000000000000000000061,); sourceTree = "<group>"; };
+ A00000000000000000000061 = {isa = PBXGroup; children = (A00000000000000000000041, A00000000000000000000042,); name = Products; sourceTree = "<group>"; };
+ A00000000000000000000062 = {isa = PBXGroup; children = (A00000000000000000000043, A00000000000000000000044, A00000000000000000000045, A00000000000000000000046, A00000000000000000000047, A00000000000000000000048, A00000000000000000000050,); path = StarDust; sourceTree = "<group>"; };
+ A00000000000000000000063 = {isa = PBXGroup; children = (A00000000000000000000049,); name = Tests; sourceTree = "<group>"; };
+ A00000000000000000000070 = {isa = PBXBuildFile; fileRef = A00000000000000000000043; };
+ A00000000000000000000071 = {isa = PBXBuildFile; fileRef = A00000000000000000000045; };
+ A00000000000000000000072 = {isa = PBXBuildFile; fileRef = A00000000000000000000047; };
+ A00000000000000000000073 = {isa = PBXBuildFile; fileRef = A00000000000000000000048; };
+ A00000000000000000000074 = {isa = PBXBuildFile; fileRef = A00000000000000000000049; };
+ A00000000000000000000075 = {isa = PBXBuildFile; fileRef = A00000000000000000000044; };
+ };
+ rootObject = A00000000000000000000010;
+}
