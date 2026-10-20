@@ -1,7 +1,7 @@
-# Android device crash audit
+# Android teardown follow-up
 
-- [x] Confirm the Android worktree is clean and fast-forward it to current main.
-- [x] Audit Activity teardown, WebView callbacks, picker completion, and background network callbacks.
-- [x] Guard WebView bridge work queued across Activity teardown and cover the state transition with a focused test.
-- [x] Run root Android checks and inspect the final diff.
+- [x] Confirm the branch includes the merged teardown guard and has no local changes.
+- [x] Inline the WebView lifecycle checks and remove the helper-only JVM test.
+- [x] Bump Android version metadata to 1.3.1/code 7.
+- [x] Run scoped tests and review the diff.
 - [x] Commit only assigned paths.

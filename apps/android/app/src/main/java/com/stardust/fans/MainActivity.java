@@ -538,9 +538,9 @@ public final class MainActivity extends Activity {
         @JavascriptInterface
         public void routeChanged(String url) {
             WebView target = webView;
-            if (!CallbackPolicy.shouldDeliver(target, webView, isFinishing(), isDestroyed())) return;
+            if (target == null || isFinishing() || isDestroyed()) return;
             runOnUiThread(() -> {
-                if (!CallbackPolicy.shouldDeliver(target, webView, isFinishing(), isDestroyed())) return;
+                if (target != webView || isFinishing() || isDestroyed()) return;
                 String current = target.getUrl();
                 if (current != null && NavigationPolicy.isInternalMainFrame(current)
                         && NavigationPolicy.routeKey(current).equals(NavigationPolicy.routeKey(url))) {
