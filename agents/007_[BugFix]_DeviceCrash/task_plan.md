@@ -5,3 +5,11 @@
 - [x] Bump Android version metadata to 1.3.1/code 7.
 - [x] Run scoped tests and review the diff.
 - [x] Commit only assigned paths.
+- [x] Add a platform-only Android instrumentation fixture for production lifecycle, file picker, and fullscreen boundaries.
+- [x] Add a portable APK build helper using the existing SDK/JDK and supplied debug key.
+- [x] Validate source/build helper without ADB.
+- [x] Commit only the requested test paths and audit records.
+- [x] Extend instrumentation to exercise all native tabs, page menu, settings/search, and lifecycle repeat teardown.
+- [x] Correct the file-picker monitor to capture launch intents without intercepting the external picker.
+- [x] Rebuild and statically validate the fixture without ADB.
+- [ ] Commit only scoped source and audit files.
