@@ -31,7 +31,19 @@
     { "id": "user-public", "title": "用户主页", "path": "/user/:id", "section": "account", "entry": false },
     { "id": "settings", "title": "设置", "path": "/settings", "section": "account", "entry": true },
     { "id": "fallback", "title": "无法访问", "path": "/fallback", "section": "system", "entry": false },
-    { "id": "aspirateur", "title": "吸尘器", "path": "/aspirateur", "section": "system", "entry": true }
+    { "id": "aspirateur", "title": "吸尘器", "path": "/aspirateur", "section": "system", "entry": true },
+    { "id": "admin", "title": "管理后台", "path": "/admin/index.html", "section": "system", "entry": true }
+  ],
+  "adminPages": [
+    { "id": "songs", "title": "视频管理", "path": "/admin/index.html#/songs" },
+    { "id": "daily", "title": "日报管理", "path": "/admin/index.html#/daily" },
+    { "id": "fanart", "title": "同人管理", "path": "/admin/index.html#/fanart" },
+    { "id": "shop", "title": "量贩管理", "path": "/admin/index.html#/shop" },
+    { "id": "audit-log", "title": "审计日志", "path": "/admin/index.html#/audit-log" },
+    { "id": "admins", "title": "管理员", "path": "/admin/index.html#/admins" },
+    { "id": "pending", "title": "待审核", "path": "/admin/index.html#/pending" },
+    { "id": "thanks", "title": "鸣谢管理", "path": "/admin/index.html#/thanks" },
+    { "id": "tags", "title": "标签管理", "path": "/admin/index.html#/tags" }
   ],
   "notificationFeeds": [
     { "id": "fanart", "path": "/api/fanart", "detailPath": "/fanart/", "title": "同人" },
@@ -42,5 +54,5 @@
     "fanart": "/api/fanart",
     "shop": "/api/shop"
   },
-  "chromeCSS": ".navbar, .live2d-companion { display: none !important; }\n.omew-stage { top: 0 !important; }"
+  "chromeCSS": ".navbar, .live2d-companion { display: none !important; }\n#app { padding-top: 0 !important; }\n.omew-stage { top: 0 !important; }"
 }

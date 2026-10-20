@@ -1,7 +1,7 @@
 # Progress
 
-- Added `packages/site-contract/site.json` with pinned website source, five native tabs, all 19 non-catch-all public routes, notification feed mappings, search API paths, and narrowly scoped chrome CSS.
-- Added a checked-in route fixture and Node built-in tests. With `WEB_REFERENCE` pointed at the pinned website checkout, the test compares the complete registered route set directly to the website router.
-- Documented functional coverage and the iPhone/iPad manual acceptance steps, including login return paths and image uploads.
-- Ran `node --test test/site-contract.test.mjs` with source comparison enabled: all 6 tests passed.
-- Test and agent files are globally ignored, so added them explicitly with `git add -f`. Prohibited marker scan on code, tests, and public documentation returned no matches.
+- Added `/admin/index.html` as the admin entry and `adminPages` for all nine concrete Vue hash modules.
+- Extended Node tests to separately compare public routes, admin hash routes, and the Vite admin HTML input against the pinned website checkout.
+- Scoped the 92px layout correction to public `#app` top padding only; existing width and horizontal gutters remain intact. Kept Omew stage at viewport top.
+- Updated package coverage and device acceptance to include admin rendering while avoiding live admin mutations.
+- Ran source-backed `node --test test/site-contract.test.mjs`: all 7 tests passed.
