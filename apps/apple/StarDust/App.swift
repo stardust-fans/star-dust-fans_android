@@ -57,6 +57,7 @@ private final class RefreshCompletion {
     @Published var showAllPages = false
     @Published var shareURL: URL?
     let web = WebSession()
+    private var navigationRequests = NavigationRequestState()
 
     init() {
         do { contract = try SiteContract.load(); selectedTab = contract?.tabs.first?.id ?? "" }
@@ -74,13 +75,27 @@ private final class RefreshCompletion {
         }
         selectedTab = contract.tabs.first(where: { url.path == $0.path || url.path.hasPrefix($0.path + "/") })?.id ?? selectedTab
         failure = nil
+        navigationRequests.recordRequest()
         web.view.load(URLRequest(url: url))
+    }
+    func openInitialPageIfNeeded() {
+        guard navigationRequests.claimInitialRequest(), let first = contract?.tabs.first else { return }
+        open(first.path)
     }
     func sync(_ url: URL?) {
         currentURL = url
         canGoBack = web.view.canGoBack
         guard let url, let contract else { return }
         if let tab = contract.tabs.first(where: { url.path == $0.path || url.path.hasPrefix($0.path + "/") }) { selectedTab = tab.id }
+    }
+    func handleIncomingURL(_ url: URL) {
+        guard let contract else { return }
+        let policy = SafeNavigation(origin: contract.origin)
+        if let destination = policy.deepLink(url) {
+            open(destination)
+        } else if let destination = policy.validated(url) {
+            open(destination)
+        }
     }
     func openSearchResult(_ destination: String) {
         guard let contract, let base = URL(string: contract.origin), let url = URL(string: destination, relativeTo: base)?.absoluteURL else { return }
@@ -131,10 +146,7 @@ struct RootView: View {
             }
         }
         .onOpenURL { url in
-            guard let contract = model.contract else { return }
-            let policy = SafeNavigation(origin: contract.origin)
-            if let destination = policy.deepLink(url) { model.open(destination) }
-            else if let valid = policy.validated(url) { model.open(valid) }
+            model.handleIncomingURL(url)
         }
     }
     private var appShell: some View {
@@ -160,7 +172,7 @@ struct RootView: View {
                 Button { model.shareURL = model.currentURL } label: { Image(systemName: "square.and.arrow.up") }.accessibilityLabel("分享当前页面")
             }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 4).background(.bar)
         }
-        .task { if let first = model.contract?.tabs.first { model.open(first.path) } }
+        .task { model.openInitialPageIfNeeded() }
     }
 }
 
@@ -226,7 +238,7 @@ struct WebContent: UIViewRepresentable {
     }
 }
 
-struct ShareItem: Identifiable { let id = UUID(); let url: URL }
+struct ShareItem: Identifiable { var id: String { url.absoluteString }; let url: URL }
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }

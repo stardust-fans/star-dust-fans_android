@@ -30,6 +30,16 @@ final class NavigationTests: XCTestCase {
         XCTAssertNil(policy.validated(URL(string: "https://evil.stardustinfinity.top/forum")!))
         XCTAssertNil(policy.validated(URL(string: "https://stardustinfinity.top:443/forum")!))
     }
+
+    func testIncomingRoutePreventsInitialTabFromReplacingIt() {
+        var state = NavigationRequestState()
+        state.recordRequest()
+        XCTAssertFalse(state.claimInitialRequest())
+
+        var freshState = NavigationRequestState()
+        XCTAssertTrue(freshState.claimInitialRequest())
+        XCTAssertFalse(freshState.claimInitialRequest())
+    }
 }
 import XCTest
 @testable import StarDust

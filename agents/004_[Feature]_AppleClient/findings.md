@@ -8,3 +8,5 @@
 - Xcode is unavailable on the Windows implementation host; macOS simulator build and XCTest remain for the parent CI run.
 - Top-level attachment links under the exact site host are handed to the system browser to support file saving; no download-completion behavior was verified in this Windows-only environment.
 - Top-level external HTTPS links open outside the app only after explicit link activation. Other schemes remain blocked except explicit `mailto:` links; subframe requests are allowed for forum SSO compatibility.
+- Initial navigation is claimed once so valid cold-start URLs take precedence; search API HTTP/decode/network errors are reported separately from successful empty search results.
+- Foreground notification delivery is explicitly enabled for queued fanart/shop notices while their opt-in remains active.
