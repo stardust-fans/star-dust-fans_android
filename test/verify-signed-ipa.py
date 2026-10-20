@@ -500,10 +500,13 @@ def verify(status_path: Path, output_path: Path, source_path: Path, recipe_sha: 
     with tempfile.TemporaryDirectory(prefix="verify-signed-ipa-") as temp_name:
         temp_dir = Path(temp_name)
         source = verify_source_artifact(source_path, report, bundle_id, temp_dir)
-        if isinstance(status.get("source_sha"), str):
-            require(status["source_sha"] == source["source_sha"], "The source commit does not match request status.")
-        if isinstance(status.get("version"), str):
-            require(status["version"] == source["version"], "The app version does not match request status.")
+        require(status.get("platform") == "ios", "The request status is not for iOS.")
+        require(status.get("source_sha") == source["source_sha"] == report["source_sha"],
+                "The source commit does not match request status.")
+        require(status.get("version") == source["version"] == report["version"],
+                "The app version does not match request status.")
+        require(status.get("input_digest") == report["input_digest"],
+                "The source archive digest does not match request status.")
         ipa_path = extract_output_ipa(output_path, status, report, temp_dir)
         version = validate_ipa(ipa_path, report, team_id, bundle_id, temp_dir, openssl,
                                local_profile_path, phone_record_path)
@@ -515,7 +518,8 @@ def verify(status_path: Path, output_path: Path, source_path: Path, recipe_sha: 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Verify a signed iOS IPA against central signing status and its source artifact.")
-    parser.add_argument("--status", required=True, type=Path, help="JSON response from GET /v1/requests/{request_id}")
+    parser.add_argument("--status", required=True, type=Path,
+                        help="One central status object for this request; select its item from an admin/status array if needed")
     parser.add_argument("--signed-zip", required=True, type=Path, help="Downloaded central output ZIP")
     parser.add_argument("--source-artifact", required=True, type=Path, help="Completed unsigned-ios-archive GitHub artifact ZIP")
     parser.add_argument("--recipe-sha", required=True)

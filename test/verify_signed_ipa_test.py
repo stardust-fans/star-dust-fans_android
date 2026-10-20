@@ -145,8 +145,9 @@ class SignedIpaVerificationTests(unittest.TestCase):
                 archive.writestr("extra.txt", "unexpected")
 
     def make_status(self, report):
-        data = {"request_id": self.request_id, "state": "succeeded", "source_sha": self.source_sha,
-                "version": self.version, "output": {"archive_size": self.output.stat().st_size,
+        data = {"request_id": self.request_id, "state": "succeeded", "platform": "ios",
+                "source_sha": self.source_sha, "version": self.version,
+                "input_digest": report["input_digest"], "output": {"archive_size": self.output.stat().st_size,
                 "archive_digest": "sha256:" + hashlib.sha256(self.output.read_bytes()).hexdigest(), "report": report}}
         self.status.write_text(json.dumps(data), encoding="utf-8")
 
@@ -184,6 +185,26 @@ class SignedIpaVerificationTests(unittest.TestCase):
         data[-1] ^= 1
         self.source.write_bytes(data)
         with self.assertRaisesRegex(VERIFY.VerificationError, "source artifact digest"):
+            self.run_check()
+
+    def test_requires_status_contract_fields(self):
+        for field in ("platform", "source_sha", "version", "input_digest"):
+            with self.subTest(field=field):
+                self.make_output(self.ipa)
+                self.make_status(self.report)
+                status = json.loads(self.status.read_text(encoding="utf-8"))
+                del status[field]
+                self.status.write_text(json.dumps(status), encoding="utf-8")
+                with self.assertRaises(VERIFY.VerificationError):
+                    self.run_check()
+
+    def test_rejects_status_input_digest_disagreement(self):
+        self.make_output(self.ipa)
+        self.make_status(self.report)
+        status = json.loads(self.status.read_text(encoding="utf-8"))
+        status["input_digest"] = "sha256:" + "0" * 64
+        self.status.write_text(json.dumps(status), encoding="utf-8")
+        with self.assertRaisesRegex(VERIFY.VerificationError, "digest does not match request status"):
             self.run_check()
 
     def test_rejects_profile_cms_tampering(self):
