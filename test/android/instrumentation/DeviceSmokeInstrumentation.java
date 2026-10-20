@@ -3,7 +3,6 @@ package com.stardust.fans.test;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -40,23 +39,28 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
             verifyContractLoaded();
             result.putString("passed_1", currentTest);
 
+            currentTest = "native_tabs_pages_settings_search";
+            verifyNativeNavigation();
+            result.putString("passed_2", currentTest);
+
             currentTest = "fullscreen_back_exit";
             verifyFullscreenBackExit();
-            result.putString("passed_2", currentTest);
+            result.putString("passed_3", currentTest);
 
             currentTest = "file_picker_extension_multi_cancel";
             verifyFilePickerCancel();
-            result.putString("passed_3", currentTest);
-
-            currentTest = "pending_picker_finish_and_late_bridge";
-            verifyFinishAndLateBridge();
             result.putString("passed_4", currentTest);
+
+            currentTest = "pending_picker_finish_and_late_bridge_stress";
+            verifyFinishAndLateBridge();
+            result.putString("passed_5", currentTest);
             result.putString("status", "passed");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable failure) {
             result.putString("status", "failed");
             result.putString("failed_test", currentTest);
             result.putString("failure_type", failure.getClass().getSimpleName());
+            if (failure.getMessage() != null) result.putString("failure_message", failure.getMessage());
             finish(Activity.RESULT_CANCELED, result);
         } finally {
             closeActivity();
@@ -99,6 +103,74 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         check(callback.hidden, "fullscreen callback was not completed");
     }
 
+    private void verifyNativeNavigation() throws Exception {
+        String[] routes = {"/videos", "/fanart", "/shop", "/omew", "/user"};
+        Object dock = readField(activity, "dock");
+        check(dock instanceof ViewGroup, "native tab dock missing");
+        ViewGroup tabs = (ViewGroup) dock;
+        check(tabs.getChildCount() == routes.length, "native tab count does not match the site");
+        for (int index = 0; index < routes.length; index++) {
+            final int tabIndex = index;
+            runOnMainSync(() -> check(tabs.getChildAt(tabIndex).performClick(), "native tab click failed"));
+            waitForRouteAndTitle(routes[index], index == 4);
+        }
+
+        int pagesId = activity.getResources().getIdentifier("top_pages", "id", TARGET);
+        check(pagesId != 0, "all-pages menu button missing");
+        runOnMainSync(() -> check(activity.findViewById(pagesId).performClick(), "all-pages menu did not open"));
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
+        sendKeyDownUpSync(KeyEvent.KEYCODE_ENTER);
+        waitForRouteAndTitle("/", false);
+
+        openNativeActivity("top_settings", "com.stardust.fans.SettingsActivity");
+        openNativeActivity("top_search", "com.stardust.fans.SearchActivity");
+    }
+
+    private void openNativeActivity(String idName, String className) throws Exception {
+        int id = activity.getResources().getIdentifier(idName, "id", TARGET);
+        check(id != 0, idName + " button missing");
+        ActivityMonitor monitor = new ActivityMonitor(className, null, false);
+        addMonitor(monitor);
+        try {
+            runOnMainSync(() -> check(activity.findViewById(id).performClick(), idName + " click failed"));
+            Activity opened = monitor.waitForActivityWithTimeout(WAIT_MS);
+            check(opened != null && className.equals(opened.getClass().getName()),
+                    className + " did not open");
+            runOnMainSync(opened::finish);
+            waitForMainResumed();
+        } finally {
+            removeMonitor(monitor);
+        }
+    }
+
+    private void waitForRouteAndTitle(String expectedPath, boolean allowLogin) throws Exception {
+        WebView webView = (WebView) readField(activity, "webView");
+        long deadline = SystemClock.uptimeMillis() + WAIT_MS;
+        while (SystemClock.uptimeMillis() < deadline) {
+            String[] state = new String[2];
+            runOnMainSync(() -> {
+                state[0] = webView.getUrl();
+                state[1] = webView.getTitle();
+            });
+            String path = state[0] == null ? null : Uri.parse(state[0]).getPath();
+            boolean routeMatches = expectedPath.equals(path)
+                    || (allowLogin && "/login".equals(path));
+            if (routeMatches && state[1] != null && !state[1].trim().isEmpty()) return;
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("route or page title did not load: " + expectedPath);
+    }
+
+    private void waitForMainResumed() throws Exception {
+        long deadline = SystemClock.uptimeMillis() + WAIT_MS;
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (activity != null && !activity.isFinishing() && !activity.isDestroyed()
+                    && activity.hasWindowFocus()) return;
+            SystemClock.sleep(50);
+        }
+        throw new AssertionError("main activity did not resume");
+    }
+
     private void verifyFilePickerCancel() throws Exception {
         WebView webView = (WebView) readField(activity, "webView");
         String html = "<html><body style='margin:0'><input id='upload' type='file' "
@@ -111,8 +183,7 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         addMonitor(monitor);
         try {
             tapWebView(webView);
-            Activity picker = monitor.waitForActivityWithTimeout(WAIT_MS);
-            check(picker != null, "system file picker did not open");
+            check(monitor.awaitIntent(WAIT_MS), "system file picker launch was not observed");
             Intent pickerIntent = monitor.lastIntent;
             check(pickerIntent != null && Intent.ACTION_OPEN_DOCUMENT.equals(pickerIntent.getAction()),
                     "unexpected file picker action");
@@ -122,6 +193,7 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
             check(hasMime(mimeTypes, "application/pdf") && hasMime(mimeTypes, "application/zip"),
                     "extension accept list was not mapped to MIME types");
             check(readField(activity, "pendingFileCallback") != null, "chooser callback was not retained");
+            waitForWindowLoss();
             sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             waitForFieldNull(activity, "pendingFileCallback");
         } finally {
@@ -137,11 +209,51 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         Method routeChanged = bridge.getClass().getDeclaredMethod("routeChanged", String.class);
         routeChanged.setAccessible(true);
 
-        runOnMainSync(() -> activity.finish());
-        waitForDestroyed(activity);
+        finishWithQueuedRoute(activity, bridge, routeChanged,
+                "https://stardustinfinity.top/videos");
         check(callback.called && callback.value == null, "destroy did not release pending chooser callback");
         check(readField(activity, "webView") == null, "WebView remained after Activity destroy");
-        routeChanged.invoke(bridge, "https://stardustinfinity.top/videos");
+
+        for (int i = 0; i < 10; i++) {
+            Activity repeated = startMain();
+            Object lateBridge = createBridge(repeated);
+            Method lateRoute = lateBridge.getClass().getDeclaredMethod("routeChanged", String.class);
+            lateRoute.setAccessible(true);
+            finishWithQueuedRoute(repeated, lateBridge, lateRoute,
+                    "https://stardustinfinity.top/fanart");
+        }
+    }
+
+    private void finishWithQueuedRoute(Activity target, Object bridge, Method route, String url)
+            throws Exception {
+        AtomicReference<Throwable> invocationFailure = new AtomicReference<>();
+        CountDownLatch queued = new CountDownLatch(1);
+        runOnMainSync(() -> {
+            Thread caller = new Thread(() -> {
+                try {
+                    route.invoke(bridge, url);
+                } catch (Throwable failure) {
+                    invocationFailure.set(failure);
+                } finally {
+                    queued.countDown();
+                }
+            }, "late-route-fixture");
+            caller.start();
+            try {
+                if (!queued.await(WAIT_MS, TimeUnit.MILLISECONDS)) {
+                    invocationFailure.set(new AssertionError("route callback was not queued"));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                invocationFailure.set(e);
+            }
+            target.finish();
+        });
+        if (invocationFailure.get() != null) throw new AssertionError("route callback failed", invocationFailure.get());
+        waitForDestroyed(target);
+        waitForIdleSync();
+        route.invoke(bridge, url);
+        waitForIdleSync();
     }
 
     private void waitForPage(WebView webView) throws Exception {
@@ -197,6 +309,15 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
             SystemClock.sleep(50);
         }
         throw new AssertionError("Activity did not reach destroyed state");
+    }
+
+    private void waitForWindowLoss() throws Exception {
+        long deadline = SystemClock.uptimeMillis() + WAIT_MS;
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (!activity.hasWindowFocus()) return;
+            SystemClock.sleep(50);
+        }
+        throw new AssertionError("file picker launch did not pause the main window");
     }
 
     private static Object createBridge(Activity target) throws Exception {
@@ -258,15 +379,21 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
 
     private static final class CapturingMonitor extends ActivityMonitor {
         volatile Intent lastIntent;
+        private final CountDownLatch launched = new CountDownLatch(1);
 
         CapturingMonitor() {
-            super(new IntentFilter(Intent.ACTION_OPEN_DOCUMENT), null, false);
+            super();
         }
 
         @Override
         public ActivityResult onStartActivity(Intent intent) {
             lastIntent = intent == null ? null : new Intent(intent);
-            return super.onStartActivity(intent);
+            if (intent != null && Intent.ACTION_OPEN_DOCUMENT.equals(intent.getAction())) launched.countDown();
+            return null;
+        }
+
+        boolean awaitIntent(long timeoutMs) throws InterruptedException {
+            return launched.await(timeoutMs, TimeUnit.MILLISECONDS);
         }
     }
 
