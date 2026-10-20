@@ -73,7 +73,7 @@ struct SearchView: View {
                 let (data, response) = try await URLSession.shared.data(from: requestURL)
                 guard (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) == true else { return SearchFetchResult(hits: [], failed: true) }
                 let records = try JSONDecoder().decode([VideoSearchRecord].self, from: data)
-                let hits = records.compactMap { record in
+                let hits: [SearchHit] = records.compactMap { record -> SearchHit? in
                     guard record.title.localizedCaseInsensitiveContains(query) || record.bvid.localizedCaseInsensitiveContains(query) || (record.owner?.name ?? "").localizedCaseInsensitiveContains(query),
                           !record.bvid.isEmpty else { return nil }
                     return SearchHit(kind: kind, title: record.title, subtitle: record.owner?.name ?? "", path: "https://www.bilibili.com/video/\(record.bvid)")
@@ -85,7 +85,7 @@ struct SearchView: View {
             guard (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) == true,
                   let array = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return SearchFetchResult(hits: [], failed: true) }
             let needle = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            let hits = array.compactMap { item in
+            let hits: [SearchHit] = array.compactMap { item -> SearchHit? in
                 let title = item["title"] as? String ?? ""
                 let subtitle = kind == "Fanart" ? (item["author"] as? String ?? "") : String(describing: item["price"] ?? "")
                 guard (title + " " + subtitle).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) else { return nil }

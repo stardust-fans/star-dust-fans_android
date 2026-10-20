@@ -10,7 +10,7 @@ import BackgroundTasks
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
-    static let refreshID = "top.stardustinfinity.mobile.refresh"
+    nonisolated static let refreshID = "top.stardustinfinity.mobile.refresh"
     func application(_ application: UIApplication, didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.refreshID, using: nil) { task in
