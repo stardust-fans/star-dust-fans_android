@@ -17,10 +17,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 站点公开接口的只读客户端。
- *
- * 关键设计：这里**只存在 fanart 与 shop 两类目标**，代码里没有任何 /api/songs 的调用。
- * 因此"视频更新不通知"不是靠开关关掉的，而是根本没有这条代码路径。
+ * Read-only client for site search and fanart/shop notification feeds.
  */
 final class ApiClient {
     private static final String TAG = "StarDustApi";
@@ -234,17 +231,17 @@ final class ApiClient {
         return value;
     }
 
-    /** 关键词搜索；空关键词返回空列表。最多返回 60 条。 */
-    static List<SearchResult> search(String keyword) {
+    /** Searches site content; notification polling uses only fanart and shop. */
+    static List<SearchResult> search(String keyword, SiteContract contract) {
         List<SearchResult> results = new ArrayList<>();
         String kw = keyword == null ? "" : keyword.trim().toLowerCase();
         if (kw.isEmpty()) {
             return results;
         }
 
-        collectSongs(kw, results);
-        collectItems(kw, results, TYPE_FANART);
-        collectItems(kw, results, TYPE_SHOP);
+        collectSongs(kw, results, contract.search.videos);
+        collectItems(kw, results, TYPE_FANART, contract.search.fanart, tabPath(contract, "fanart"));
+        collectItems(kw, results, TYPE_SHOP, contract.search.shop, tabPath(contract, "shop"));
 
         if (results.size() > 60) {
             return new ArrayList<>(results.subList(0, 60));
@@ -252,22 +249,26 @@ final class ApiClient {
         return results;
     }
 
-    private static void collectSongs(String kw, List<SearchResult> out) {
+    private static void collectSongs(String kw, List<SearchResult> out, String endpoint) {
         try {
-            JSONArray array = fetchPath("/api/songs");
+            String query = java.net.URLEncoder.encode(kw, "UTF-8");
+            JSONArray array = fetchPath(endpoint + "?q=" + query + "&limit=20&offset=0");
             for (int i = 0; i < array.length(); i++) {
                 JSONObject object = array.optJSONObject(i);
                 if (object == null) {
                     continue;
                 }
                 String title = str(object, "title", "");
-                String owner = str(object, "owner_name", "");
-                if (title.toLowerCase().contains(kw) || owner.toLowerCase().contains(kw)) {
+                JSONObject ownerObject = object.optJSONObject("owner");
+                String owner = ownerObject == null ? "" : str(ownerObject, "name", "");
+                String bvid = str(object, "bvid", "");
+                if ((title.toLowerCase().contains(kw) || owner.toLowerCase().contains(kw)
+                        || bvid.toLowerCase().contains(kw)) && bvid.matches("BV[0-9A-Za-z]+")) {
                     out.add(new SearchResult(
                             "视频",
                             title.isEmpty() ? "未知标题" : title,
                             owner,
-                            BASE + "/videos"));
+                            "https://www.bilibili.com/video/" + bvid));
                 }
             }
         } catch (Exception e) {
@@ -275,10 +276,10 @@ final class ApiClient {
         }
     }
 
-    private static void collectItems(String kw, List<SearchResult> out, String type) {
+    private static void collectItems(String kw, List<SearchResult> out, String type, String endpoint, String route) {
         boolean fanart = TYPE_FANART.equals(type);
         try {
-            JSONArray array = fetchArray(type);
+            JSONArray array = fetchPath(endpoint);
             for (int i = 0; i < array.length(); i++) {
                 JSONObject object = array.optJSONObject(i);
                 if (object == null) {
@@ -294,11 +295,16 @@ final class ApiClient {
                             fanart ? "同人" : "量贩",
                             title.isEmpty() ? "无题" : title,
                             subtitle,
-                            BASE + (fanart ? "/fanart/" : "/shop/") + id));
+                            BASE + route + "/" + id));
                 }
             }
         } catch (Exception e) {
             Log.w(TAG, "search " + type + " failed", e);
         }
+    }
+
+    private static String tabPath(SiteContract contract, String id) {
+        for (SiteContract.Entry tab : contract.tabs) if (id.equals(tab.id)) return tab.path;
+        throw new IllegalStateException("Required site tab is missing: " + id);
     }
 }

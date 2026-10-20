@@ -13,19 +13,20 @@ import android.widget.BaseAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 搜索页：调用站点公开接口（/api/songs、/api/fanart、/api/shop）在本地过滤，
- * 点击结果回到主界面并跳到对应页面。不需要登录。
+ * 搜索站点公开视频、同人和量贩内容；视频结果打开对应视频，其余结果留在站点内。
  */
 public final class SearchActivity extends Activity {
     private EditText input;
     private ListView listView;
     private TextView status;
     private ResultAdapter adapter;
+    private SiteContract contract;
 
     private final List<ApiClient.SearchResult> results = new ArrayList<>();
 
@@ -37,6 +38,15 @@ public final class SearchActivity extends Activity {
         input = findViewById(R.id.search_input);
         listView = findViewById(R.id.search_results);
         status = findViewById(R.id.search_status);
+
+        try {
+            contract = SiteContract.load(this);
+            if (!ApiClient.BASE.equals(contract.origin)) throw new org.json.JSONException("Site origin mismatch");
+        } catch (Exception e) {
+            Toast.makeText(this, "站点搜索配置不可用", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
@@ -77,7 +87,7 @@ public final class SearchActivity extends Activity {
         status.setVisibility(View.VISIBLE);
 
         new Thread(() -> {
-            final List<ApiClient.SearchResult> found = ApiClient.search(query);
+            final List<ApiClient.SearchResult> found = ApiClient.search(query, contract);
             runOnUiThread(() -> {
                 results.clear();
                 results.addAll(found);
@@ -97,9 +107,20 @@ public final class SearchActivity extends Activity {
         if (result == null) {
             return;
         }
+        Uri uri = Uri.parse(result.url);
+        if (NavigationPolicy.isBilibiliVideoUrl(result.url)) {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                finish();
+            } catch (android.content.ActivityNotFoundException e) {
+                Toast.makeText(this, "无法打开视频链接", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+        if (!NavigationPolicy.isRootDeepLink(result.url)) return;
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse(result.url));
+        intent.setData(uri);
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
         finish();

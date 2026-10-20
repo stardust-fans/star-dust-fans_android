@@ -21,7 +21,7 @@
 [CmdletBinding()]
 param(
     [switch]$Clean,
-    [string]$Proxy = 'http://127.0.0.1:7890',
+    [string]$Proxy = '',
     [switch]$NoSdkDownload
 )
 
@@ -35,6 +35,9 @@ if ($PSScriptRoot) {
     $RealRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 } else {
     $RealRoot = (Get-Location).Path
+}
+if (-not (Test-Path -LiteralPath (Join-Path $RealRoot 'app\src\main\AndroidManifest.xml'))) {
+    throw 'Run this script from the apps/android project; the resolved path is not a valid Android project root.'
 }
 
 $Package     = 'com.stardust.fans'
@@ -160,9 +163,24 @@ function Invoke-Download([string]$Url, [string]$Destination) {
     }
 }
 
+function Assert-WorkspacePath([string]$Candidate, [string]$WorkspaceRoot) {
+    $rootPath = [System.IO.Path]::GetFullPath($WorkspaceRoot).TrimEnd('\') + '\'
+    $candidatePath = [System.IO.Path]::GetFullPath($Candidate)
+    if (-not $candidatePath.StartsWith($rootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing filesystem operation outside the Android project: $candidatePath"
+    }
+    if (Test-Path -LiteralPath $candidatePath) {
+        $item = Get-Item -LiteralPath $candidatePath -Force
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "Refusing filesystem operation through a reparse point: $candidatePath"
+        }
+    }
+}
+
 function Expand-Zip([string]$ZipPath, [string]$Destination) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
-    if (Test-Path $Destination) { Remove-Item $Destination -Recurse -Force }
+    Assert-WorkspacePath $Destination $Root
+    if (Test-Path $Destination) { Remove-Item -LiteralPath $Destination -Recurse -Force }
     [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $Destination)
 }
 
@@ -185,8 +203,10 @@ function Install-Sdk([string]$LocalSdk) {
     $aapt2 = Get-ChildItem $btTmp -Recurse -Filter 'aapt2.exe' | Select-Object -First 1
     if (-not $aapt2) { throw 'build-tools 包里没找到 aapt2.exe' }
     $btOut = Join-Path $LocalSdk 'build-tools\36.0.0'
+    Assert-WorkspacePath $aapt2.Directory.FullName $Root
+    Assert-WorkspacePath $btOut $Root
     New-Item -ItemType Directory -Force -Path (Split-Path $btOut -Parent) | Out-Null
-    if (Test-Path $btOut) { Remove-Item $btOut -Recurse -Force }
+    if (Test-Path $btOut) { Remove-Item -LiteralPath $btOut -Recurse -Force }
     Move-Item $aapt2.Directory.FullName $btOut
     Write-Ok "build-tools -> $btOut"
 
@@ -195,12 +215,16 @@ function Install-Sdk([string]$LocalSdk) {
     $androidJar = Get-ChildItem $platTmp -Recurse -Filter 'android.jar' | Select-Object -First 1
     if (-not $androidJar) { throw 'platform 包里没找到 android.jar' }
     $platOut = Join-Path $LocalSdk 'platforms\android-34'
+    Assert-WorkspacePath $androidJar.Directory.FullName $Root
+    Assert-WorkspacePath $platOut $Root
     New-Item -ItemType Directory -Force -Path (Split-Path $platOut -Parent) | Out-Null
-    if (Test-Path $platOut) { Remove-Item $platOut -Recurse -Force }
+    if (Test-Path $platOut) { Remove-Item -LiteralPath $platOut -Recurse -Force }
     Move-Item $androidJar.Directory.FullName $platOut
     Write-Ok "platform -> $platOut"
 
-    Remove-Item $btTmp, $platTmp -Recurse -Force -ErrorAction SilentlyContinue
+    Assert-WorkspacePath $btTmp $Root
+    Assert-WorkspacePath $platTmp $Root
+    Remove-Item -LiteralPath $btTmp, $platTmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # ---------------------------------------------------------------- 主流程
@@ -221,6 +245,11 @@ try {
     $OutDir = Join-Path $Root 'out'
     $KeysDir = Join-Path $Root 'keys'
     $LocalSdk = Join-Path $Root 'sdk'
+
+    Assert-WorkspacePath $BuildDir $Root
+    Assert-WorkspacePath $OutDir $Root
+    Assert-WorkspacePath $KeysDir $Root
+    Assert-WorkspacePath $LocalSdk $Root
 
     Write-Step '环境检查'
     $JavaHome = Get-JavaHome
@@ -247,7 +276,7 @@ try {
     $SignerJar = Join-Path $sdk.BuildTools 'lib\apksigner.jar'
 
     if (Test-Path $BuildDir) {   # 始终清理，避免上次编译的旧 class 被一起打进 dex
-        Remove-Item $BuildDir -Recurse -Force
+        Remove-Item -LiteralPath $BuildDir -Recurse -Force
     }
     New-Item -ItemType Directory -Force -Path $BuildDir, $OutDir, $KeysDir | Out-Null
 
@@ -271,7 +300,9 @@ try {
     $baseApk = Join-Path $BuildDir 'base.apk'
     $genDir = Join-Path $BuildDir 'gen'
     New-Item -ItemType Directory -Force -Path $genDir | Out-Null
-    & $Aapt2 link -o $baseApk -I $sdk.AndroidJar --manifest $stampedManifest --java $genDir --min-sdk-version $MinSdk --target-sdk-version $TargetSdk --version-code $VersionCode --version-name $VersionName $resZip
+    $ContractDir = [System.IO.Path]::GetFullPath((Join-Path $RealRoot '..\..\packages\site-contract'))
+    if (-not (Test-Path (Join-Path $ContractDir 'site.json'))) { throw 'Shared site contract is missing' }
+    & $Aapt2 link -o $baseApk -I $sdk.AndroidJar --manifest $stampedManifest --java $genDir --min-sdk-version $MinSdk --target-sdk-version $TargetSdk --version-code $VersionCode --version-name $VersionName -A $ContractDir $resZip
     if ($LASTEXITCODE -ne 0) { throw 'aapt2 link 失败' }
     Write-Ok $baseApk
 
