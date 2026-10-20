@@ -8,3 +8,5 @@
 | 003 | [Feature] AndroidParity | 安卓完整导航和系统交互 | 对齐网页能力 | ✅ 已完成 |
 | 004 | [Feature] AppleClient | iPhone/iPad 原生外壳 | 新增苹果端 | ✅ 已完成 |
 | 005 | [Validation] DeviceSigning | 查找既有开发证书、签署苹果真机包并进行安卓 ADB 真机崩溃测试 | 用户要求自签与本机实测 | 🔄 进行中 |
+| 006 | [Validation] AppleSigning | 核验中央签名能力并构建 unsigned iphoneos 产物 | 明确 iOS 签名前置条件 | ✅ 已完成 |
+| 007 | [BugFix] DeviceCrash | 修复 WebView 销毁回调并补充真机 instrumentation | 防止退出时空引用与选择器回调泄漏 | ✅ 已完成 |

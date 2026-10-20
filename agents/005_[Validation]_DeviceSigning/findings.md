@@ -7,3 +7,6 @@
 - 真机为同一台 Honor RNA-AN00 / Android 14 API 34 的 USB 和无线 transport -> 使用 USB 安装 1.3.0，随后原位升级同 debug 签名的 1.3.1/code7 -> 未卸载、未清除数据。
 - 导航 UI 脚本在视频与同人第一页验证后遇 UIAutomator shell exit 137 -> adb pidof、Activity 状态及截图显示应用仍运行 -> 原生设置 Activity 的 UI dump 成功，问题限定于网页 accessibility dump 工具，不能据此报告应用崩溃。补充脚本退出码诊断，并用真实 instrumentation 继续。
 - 截至 instrumentation 之前，UID 限定 logcat 未发现 FATAL EXCEPTION、Fatal signal、ANR in；exit-info 只见安装升级导致的 PACKAGE UPDATED 和 WebView isolated not needed。该结论仅覆盖已执行流程。
+- 首次 instrumentation 中 contract/WebView 初始化与五个 dock tab 通过，菜单 DPAD 猜测没有选到主页而中止 -> 修正为按原生无障碍文字点击菜单项；保持断言不变。完成 instrumentation 时系统 force-stop exit 原因为 finished inst，启动时为 start instr，均不计为崩溃。
+- 合并测试分支时对方重写了前一提交，产生 fixture/audit 冲突 -> 以作者最新已审核 fixture 完整版本解决四个冲突并重新编译 -> 成功。冲突状态的首次编译失败未执行到设备。
+- 不再保留本次新增的 UIAutomator 全网页树导航脚本；使用实际 instrumentation 入口，避免同一个页面 dump 问题成为长期脆弱测试。

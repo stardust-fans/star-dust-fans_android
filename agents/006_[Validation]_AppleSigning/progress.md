@@ -6,3 +6,4 @@
 - Added a macOS job to build the generic `iphoneos` Release app without signing and upload an unsigned `.app` zip artifact.
 - Inspected the central signing service's README, policy, runner contract, executor list and owner allowlist. Confirmed that neither iOS IPA signing nor this repository owner's enrollment is supported by the existing service policy.
 - PyYAML/actionlint/Xcode are unavailable on the Windows host; reviewed the YAML structure and verified `git diff --check`. The actual generic iOS-device build can run only in macOS CI.
+- Commit ceb0a6c was merged to integration. CI run 39430720053 passed all jobs, including generic iphoneos Release build; the unsigned artifact was downloaded to the workspace outputs directory. The identical device-build job also passed in run 39431758683.
