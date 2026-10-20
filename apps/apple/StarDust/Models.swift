@@ -22,7 +22,15 @@ struct SiteContract: Decodable {
               value.version == 1, !value.tabs.isEmpty, !value.pages.isEmpty else { throw ContractError.invalid }
         return value
     }
-    enum ContractError: Error { case missing, invalid }
+    enum ContractError: LocalizedError {
+        case missing, invalid
+        var errorDescription: String? {
+            switch self {
+            case .missing: return "找不到打包的站点配置文件 site.json。"
+            case .invalid: return "站点配置版本、HTTPS 来源或页面清单无效。"
+            }
+        }
+    }
 }
 
 struct SafeNavigation {
@@ -38,13 +46,72 @@ struct SafeNavigation {
     func deepLink(_ url: URL) -> URL? {
         guard url.scheme == "stardust", url.host == "open", url.user == nil, url.password == nil,
               url.port == nil, let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let path = components.queryItems?.first(where: { $0.name == "path" })?.value,
-              path.hasPrefix("/"), !path.hasPrefix("//") else { return nil }
-        return URL(string: path, relativeTo: origin)?.absoluteURL
+              let items = components.queryItems, items.count == 1, items[0].name == "path",
+              let path = items[0].value, path.hasPrefix("/"), !path.hasPrefix("//"),
+              !path.contains("\\"), !path.lowercased().contains("%5c"),
+              let destination = URL(string: path, relativeTo: origin)?.absoluteURL,
+              validated(destination) != nil else { return nil }
+        return destination
     }
 }
 
 struct FeedRecord: Decodable, Identifiable { let id: Int; let title: String; let author: String?; let price: String? }
+
+enum FeedBaseline {
+    static func establish(existing: Int?, fetchedMaximum: Int) -> Int? {
+        existing ?? fetchedMaximum
+    }
+    static func unseen(existing: Int?, itemIDs: [Int]) -> [Int] {
+        guard let existing else { return [] }
+        return itemIDs.filter { $0 > existing }.sorted()
+    }
+    static func advance(existing: Int?, newest: Int) -> Int {
+        max(existing ?? newest, newest)
+    }
+}
+
+final class FeedPreferenceStore: @unchecked Sendable {
+    struct Snapshot { let enabled: Bool; let generation: Int }
+    static let shared = FeedPreferenceStore()
+    private let defaults: UserDefaults
+    private let lock = NSLock()
+
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    func setEnabled(_ enabled: Bool, feedID: String) {
+        lock.lock(); defer { lock.unlock() }
+        let generationKey = "generation.\(feedID)"
+        defaults.set(defaults.integer(forKey: generationKey) &+ 1, forKey: generationKey)
+        defaults.set(enabled, forKey: "notify.\(feedID)")
+        if !enabled { defaults.removeObject(forKey: "baseline.\(feedID)") }
+    }
+    func snapshot(feedID: String) -> Snapshot {
+        lock.lock(); defer { lock.unlock() }
+        return Snapshot(enabled: defaults.bool(forKey: "notify.\(feedID)"), generation: defaults.integer(forKey: "generation.\(feedID)"))
+    }
+    func baseline(feedID: String) -> Int? {
+        lock.lock(); defer { lock.unlock() }
+        return defaults.object(forKey: "baseline.\(feedID)") as? Int
+    }
+    @discardableResult func establishBaseline(_ value: Int, feedID: String, ifCurrent snapshot: Snapshot) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard defaults.bool(forKey: "notify.\(feedID)"), defaults.integer(forKey: "generation.\(feedID)") == snapshot.generation else { return false }
+        guard defaults.object(forKey: "baseline.\(feedID)") == nil else { return false }
+        defaults.set(value, forKey: "baseline.\(feedID)")
+        return true
+    }
+    @discardableResult func advanceBaseline(_ value: Int, feedID: String, ifCurrent snapshot: Snapshot) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard defaults.bool(forKey: "notify.\(feedID)"), defaults.integer(forKey: "generation.\(feedID)") == snapshot.generation else { return false }
+        defaults.set(value, forKey: "baseline.\(feedID)")
+        return true
+    }
+}
+
+enum SearchDestination {
+    static func detail(prefix: String, itemID: Int) -> String {
+        prefix + String(itemID)
+    }
+}
 
 
 struct VideoSearchRecord: Decodable {

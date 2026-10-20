@@ -1,44 +1,57 @@
 import SwiftUI
 import Foundation
+import BackgroundTasks
 
-struct SearchHit: Identifiable, Sendable { let id = UUID(); let kind: String; let title: String; let subtitle: String; let path: String }
+struct SearchHit: Identifiable, Sendable {
+    let id = UUID()
+    let kind: String
+    let title: String
+    let subtitle: String
+    let path: String
+    var displayKind: String { kind == "Videos" ? "视频" : (kind == "Fanart" ? "同人" : "量贩") }
+}
 struct SearchView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var hits: [SearchHit] = []
     @State private var busy = false
-    @State private var message = "Enter a search term"
+    @State private var message = "输入关键词开始搜索"
     @State private var searchTask: Task<Void, Never>?
     var body: some View {
         NavigationStack {
             List {
-                Section { TextField("Videos, fanart, shop", text: $query).submitLabel(.search).onSubmit { submit() }; Button(action: submit) { Label("Search all content", systemImage: "magnifyingglass") }.disabled(query.trimmingCharacters(in: .whitespaces).isEmpty) }
-                if busy { ProgressView() }
+                Section { TextField("搜索视频、同人和量贩", text: $query).submitLabel(.search).onSubmit { submit() }; Button(action: submit) { Label("搜索全站内容", systemImage: "magnifyingglass") }.disabled(query.trimmingCharacters(in: .whitespaces).isEmpty) }
+                if busy { ProgressView().accessibilityLabel("搜索中") }
                 if hits.isEmpty { Text(message).foregroundStyle(.secondary) }
-                ForEach(hits) { hit in Button { model.openSearchResult(hit.path); dismiss() } label: { VStack(alignment: .leading) { Text(hit.title).font(.headline); Text("\(hit.kind) · \(hit.subtitle)").font(.caption).foregroundStyle(.secondary) } } }
-            }.navigationTitle("Search").toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+                ForEach(hits) { hit in Button { model.openSearchResult(hit.path); dismiss() } label: { VStack(alignment: .leading) { Text(hit.title).font(.headline); Text("\(hit.displayKind) · \(hit.subtitle)").font(.caption).foregroundStyle(.secondary) } } }
+        }.navigationTitle("搜索").toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("完成") { dismiss() } } }
         }.onDisappear { searchTask?.cancel() }
     }
     private func submit() {
         searchTask?.cancel()
-        searchTask = Task { await search() }
+        let term = query
+        searchTask = Task { await search(term: term) }
     }
-    @MainActor private func search() async {
+    @MainActor private func search(term rawTerm: String) async {
         guard let contract = model.contract, let base = URL(string: contract.origin) else { return }
-        let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !term.isEmpty else { return }
-        busy = true; hits = []; message = "Searching…"
-        let endpoints = [("Videos", contract.search.videos), ("Fanart", contract.search.fanart), ("Shop", contract.search.shop)]
+        let term = rawTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !term.isEmpty else { hits = []; busy = false; message = "输入关键词开始搜索"; return }
+        busy = true; hits = []; message = "搜索中…"
+        var endpoints: [(String, String, String?)] = [("Videos", contract.search.videos, nil)]
+        endpoints += contract.notificationFeeds.compactMap { feed in
+            guard feed.id == "fanart" || feed.id == "shop" else { return nil }
+            return (feed.id == "fanart" ? "Fanart" : "Shop", feed.path, feed.detailPath)
+        }
         var all: [SearchHit] = []
         await withTaskGroup(of: [SearchHit].self) { group in
-            for (kind, path) in endpoints { group.addTask { await Self.fetch(kind: kind, path: path, base: base, query: term) } }
+            for (kind, path, detailPath) in endpoints { group.addTask { await Self.fetch(kind: kind, path: path, detailPath: detailPath, base: base, query: term) } }
             for await values in group { all.append(contentsOf: values) }
         }
         guard !Task.isCancelled else { return }
-        hits = Array(all.prefix(60)); busy = false; message = hits.isEmpty ? "No matching content found" : ""
+        hits = Array(all.prefix(60)); busy = false; message = hits.isEmpty ? "没有找到匹配内容" : ""
     }
-    nonisolated private static func fetch(kind: String, path: String, base: URL, query: String) async -> [SearchHit] {
+    nonisolated private static func fetch(kind: String, path: String, detailPath: String?, base: URL, query: String) async -> [SearchHit] {
         guard let endpoint = URL(string: path, relativeTo: base)?.absoluteURL else { return [] }
         do {
             var requestURL = endpoint
@@ -55,6 +68,7 @@ struct SearchView: View {
                     return SearchHit(kind: kind, title: record.title, subtitle: record.owner?.name ?? "", path: "https://www.bilibili.com/video/\(record.bvid)")
                 }
             }
+            guard let detailPath else { return [] }
             let (data, _) = try await URLSession.shared.data(from: requestURL)
             guard let array = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
             let needle = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
@@ -63,7 +77,7 @@ struct SearchView: View {
                 let subtitle = kind == "Fanart" ? (item["author"] as? String ?? "") : String(describing: item["price"] ?? "")
                 guard (title + " " + subtitle).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) else { return nil }
                 let id = item["id"] as? Int ?? 0
-                return SearchHit(kind: kind, title: title, subtitle: subtitle, path: "\(path)/\(id)")
+                return SearchHit(kind: kind, title: title, subtitle: subtitle, path: SearchDestination.detail(prefix: detailPath, itemID: id))
             }
         } catch { return [] }
     }
@@ -75,65 +89,87 @@ struct PageDirectoryView: View {
         NavigationStack {
             List {
                 ForEach(Dictionary(grouping: (model.contract?.pages ?? []).filter(\.entry), by: \.section).keys.sorted(), id: \.self) { section in
-                    Section(section.capitalized) {
+                    Section(sectionTitle(section)) {
                         ForEach((model.contract?.pages ?? []).filter { $0.entry && $0.section == section }) { page in
                             Button(page.title) { model.open(page.path); dismiss() }
                         }
                     }
                 }
-            }.navigationTitle("All pages").toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+            }.navigationTitle("全部页面").toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("完成") { dismiss() } } }
+        }
+    }
+    private func sectionTitle(_ section: String) -> String {
+        switch section {
+        case "discover": return "发现"
+        case "content": return "内容"
+        case "account": return "账号"
+        case "system": return "其他"
+        default: return section
         }
     }
 }
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("notify.fanart") private var fanart = false
-    @AppStorage("notify.shop") private var shop = false
+    @State private var fanart: Bool
+    @State private var shop: Bool
     @AppStorage("notify.interval") private var interval = 60
     @State private var status = ""
+    init() {
+        _fanart = State(initialValue: FeedPreferenceStore.shared.snapshot(feedID: "fanart").enabled)
+        _shop = State(initialValue: FeedPreferenceStore.shared.snapshot(feedID: "shop").enabled)
+    }
     var body: some View {
         NavigationStack {
             Form {
-                Section("New posts") {
-                    Toggle("Fanart", isOn: $fanart).onChange(of: fanart) { _ in changed() }
-                    Toggle("Shop", isOn: $shop).onChange(of: shop) { _ in changed() }
-                    Picker("Check while app is open", selection: $interval) { Text("15 minutes").tag(15); Text("30 minutes").tag(30); Text("1 hour").tag(60); Text("3 hours").tag(180) }.onChange(of: interval) { _ in NotificationService.shared.schedule() }
-                    Text("Background checks are scheduled by iOS and may run less often or not at all. Video alerts are not available.").font(.footnote).foregroundStyle(.secondary)
+                Section("新内容提醒") {
+                    Toggle("同人", isOn: Binding(get: { fanart }, set: { setFeed("fanart", enabled: $0) }))
+                    Toggle("量贩", isOn: Binding(get: { shop }, set: { setFeed("shop", enabled: $0) }))
+                    Picker("前台检查间隔", selection: $interval) { Text("15 分钟").tag(15); Text("30 分钟").tag(30); Text("1 小时").tag(60); Text("3 小时").tag(180) }.onChange(of: interval) { _ in Task { await NotificationService.shared.schedule() } }
+                    Text("后台检查由 iOS 调度，实际间隔可能更长或跳过。视频暂无更新提醒。").font(.footnote).foregroundStyle(.secondary)
                     if !status.isEmpty { Text(status).font(.footnote) }
                 }
-                Section("Privacy") { Text("Pages and sign-in use a persistent website data store on this device. Forum SSO depends on Safari/WebKit privacy policy and the forum provider.").font(.footnote) }
-            }.navigationTitle("Settings").toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+                Section("隐私") { Text("网页和登录状态保存在本机。论坛单点登录是否可用，取决于 WebKit 隐私策略与论坛服务。").font(.footnote) }
+            }.navigationTitle("设置").toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("完成") { dismiss() } } }
         }
     }
-    private func changed() { Task { status = await NotificationService.shared.setEnabled(fanart || shop) } }
+    private func setFeed(_ feedID: String, enabled: Bool) {
+        if feedID == "fanart" { fanart = enabled } else { shop = enabled }
+        FeedPreferenceStore.shared.setEnabled(enabled, feedID: feedID)
+        Task {
+            status = await NotificationService.shared.feedSettingChanged(feedID)
+            await NotificationService.shared.schedule()
+        }
+    }
 }
 
 actor NotificationService {
     static let shared = NotificationService()
-    private let defaults = UserDefaults.standard
+    private let preferences = FeedPreferenceStore.shared
     private var contract: SiteContract? { try? SiteContract.load() }
+    private var isPolling = false
 
-    func setEnabled(_ enabled: Bool) async -> String {
-        if enabled {
-            let settings = await UNUserNotificationCenter.current().notificationSettings()
-            if settings.authorizationStatus == .notDetermined {
-                do { guard try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) else { return "Notifications were not permitted." } }
-                catch { return "Notification permission could not be requested." }
-            } else if settings.authorizationStatus == .denied { return "Allow notifications in iOS Settings to receive alerts." }
+    func feedSettingChanged(_ feedID: String) async -> String {
+        guard contract?.notificationFeeds.contains(where: { $0.id == feedID }) == true else { return "找不到此提醒来源。" }
+        guard preferences.snapshot(feedID: feedID).enabled else {
+            return "提醒设置已保存。"
         }
-        for feed in contract?.notificationFeeds ?? [] {
-            let key = "notify.\(feed.id)", baseline = "baseline.\(feed.id)"
-            guard defaults.bool(forKey: key) else { defaults.removeObject(forKey: baseline); continue }
-            if defaults.object(forKey: baseline) == nil, let current = await maxID(path: feed.path) { defaults.set(current, forKey: baseline) }
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        if settings.authorizationStatus == .notDetermined {
+            do {
+                guard try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) else { return "未获得通知权限。可在系统设置中开启。" }
+            } catch { return "无法申请通知权限：\(error.localizedDescription)" }
+        } else if settings.authorizationStatus == .denied {
+            return "请在系统设置中允许通知。"
         }
+        await poll()
         schedule()
-        return "Notification preferences saved."
+        return "提醒设置已保存。"
     }
 
     func schedule() {
         let feeds = contract?.notificationFeeds ?? []
-        guard feeds.contains(where: { defaults.bool(forKey: "notify.\($0.id)") }) else {
+        guard feeds.contains(where: { preferences.snapshot(feedID: $0.id).enabled }) else {
             BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: AppDelegate.refreshID)
             return
         }
@@ -144,32 +180,46 @@ actor NotificationService {
     }
 
     func poll() async {
+        guard !isPolling else { return }
+        isPolling = true
+        defer { isPolling = false }
+        let permission = await UNUserNotificationCenter.current().notificationSettings()
+        guard permission.authorizationStatus == .authorized || permission.authorizationStatus == .provisional else { return }
         guard let contract, let base = URL(string: contract.origin) else { return }
-        for feed in contract.notificationFeeds where defaults.bool(forKey: "notify.\(feed.id)") {
+        for feed in contract.notificationFeeds {
+            guard !Task.isCancelled else { return }
+            let snapshot = preferences.snapshot(feedID: feed.id)
+            guard snapshot.enabled else { continue }
             guard let url = URL(string: feed.path, relativeTo: base),
                   let (data, _) = try? await URLSession.shared.data(from: url),
                   let records = try? JSONDecoder().decode([FeedRecord].self, from: data) else { continue }
-            let key = "baseline.\(feed.id)", last = defaults.integer(forKey: key), newest = records.map(\.id).max() ?? last
-            guard defaults.object(forKey: key) != nil else { defaults.set(newest, forKey: key); continue }
-            let fresh = records.filter { $0.id > last }.sorted { $0.id < $1.id }
-            for item in fresh.prefix(5) {
+            let afterFetch = preferences.snapshot(feedID: feed.id)
+            guard !Task.isCancelled, afterFetch.enabled, afterFetch.generation == snapshot.generation else { continue }
+            let existing = preferences.baseline(feedID: feed.id)
+            let newest = records.map(\.id).max() ?? existing ?? 0
+            guard let existing else {
+                if let baseline = FeedBaseline.establish(existing: nil, fetchedMaximum: newest) {
+                    preferences.establishBaseline(baseline, feedID: feed.id, ifCurrent: snapshot)
+                }
+                continue
+            }
+            for id in FeedBaseline.unseen(existing: existing, itemIDs: records.map(\.id)).prefix(5) {
+                let current = preferences.snapshot(feedID: feed.id)
+                guard !Task.isCancelled, current.enabled, current.generation == snapshot.generation,
+                      let item = records.first(where: { $0.id == id }) else { break }
                 let content = UNMutableNotificationContent()
-                content.title = "New \(feed.title)"
+                content.title = "有新内容：\(feed.title)"
                 content.body = item.title
                 content.sound = .default
                 content.userInfo = ["path": "\(feed.detailPath)\(item.id)"]
                 try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "\(feed.id)-\(item.id)", content: content, trigger: nil))
             }
-            defaults.set(max(last, newest), forKey: key)
+            let beforeAdvance = preferences.snapshot(feedID: feed.id)
+            guard !Task.isCancelled, beforeAdvance.enabled, beforeAdvance.generation == snapshot.generation else { continue }
+            preferences.advanceBaseline(FeedBaseline.advance(existing: existing, newest: newest), feedID: feed.id, ifCurrent: snapshot)
         }
     }
 
-    private func maxID(path: String) async -> Int? {
-        guard let contract, let base = URL(string: contract.origin), let url = URL(string: path, relativeTo: base),
-              let (data, _) = try? await URLSession.shared.data(from: url),
-              let values = try? JSONDecoder().decode([FeedRecord].self, from: data) else { return nil }
-        return values.map(\.id).max() ?? 0
-    }
 }
 import UIKit
 import UserNotifications
@@ -178,8 +228,14 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if let path = response.notification.request.content.userInfo["path"] as? String,
-           let url = URL(string: "stardust://open?path=\(path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-            DispatchQueue.main.async { UIApplication.shared.open(url) }
+           path.hasPrefix("/"), !path.hasPrefix("//"), !path.contains("\\") {
+            var components = URLComponents()
+            components.scheme = "stardust"
+            components.host = "open"
+            components.queryItems = [URLQueryItem(name: "path", value: path)]
+            if let url = components.url {
+                DispatchQueue.main.async { UIApplication.shared.open(url) }
+            }
         }
         completionHandler()
     }
