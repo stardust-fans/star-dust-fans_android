@@ -17,3 +17,4 @@
 - macOS15 官方 runner image 查验 Xcode16.4 与 iOS18.5 iPhone16 / iPad(A16) 可用；CI 固定这组工具链和两个目的地。
 - macOS CI 39368926817：contract 与 Android Gradle 构建通过；Apple 编译发现 Features.swift 两个 compactMap 泛型推断失败。作者显式标注 SearchHit? 闭包返回类型，并修复 refreshID 的 actor 隔离警告后重新验证。
 - Apple 官方 applicationDidEnterBackground 文档确认采用 scenes 的应用不收到该回调；修正为 SwiftUI scenePhase 在 background 提交任务，前台轮询只在 active 运行，并声明单 scene 以匹配共享 WebView 实例。
+- CI 39369281212：Apple iPhone/iPad 通用模拟器应用编译成功；XCTest 构建因 StarDustTests 缺 PRODUCT_NAME 产生空名 .xctest 输出冲突，补齐两个配置的 PRODUCT_NAME；Debug 禁止优化且关闭旧 headermap 搜索。
