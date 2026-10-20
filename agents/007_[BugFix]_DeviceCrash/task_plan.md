@@ -17,3 +17,6 @@
 - [x] Ensure the instrumentation runner is started from onCreate and publishes progress before each test.
 - [x] Rebuild and validate the bounded instrumentation update without ADB.
 - [x] Commit the bounded instrumentation update.
+- [x] Replace guessed menu key selection with a UiAutomation accessibility click on the exact home item.
+- [x] Publish native navigation subcase progress and rebuild the fixture.
+- [x] Commit the device-confirmed menu fix.
