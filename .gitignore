@@ -1,28 +1,27 @@
-# ===== 构建产物 =====
 build/
-out/*.apk
-out/*.idsig
+out/
 .gradle/
 .local/
-
-# ===== 本地 SDK 与下载缓存（体积巨大，不入库）=====
 sdk/
-
-# ===== 签名密钥（务必不要提交）=====
 keys/
-
-# ===== 本地下载的 Gradle 发行版（仅用于生成 wrapper）=====
-tools/gradle-*/
-tools/*.zip
-
-# ===== 本机配置 =====
 local.properties
-
-# ===== IDE =====
 .idea/
 *.iml
 .kotlin/
-
-# ===== 系统垃圾 =====
 .DS_Store
 Thumbs.db
+node_modules/
+DerivedData/
+.build/
+xcuserdata/
+*.xcuserstate
+*.xcarchive
+*.ipa
+*.apk
+*.idsig
+apps/android/tools/gradle-*/
+apps/android/tools/*.zip
+!/agents/
+!/agents/**
+!/test/
+!/test/**
