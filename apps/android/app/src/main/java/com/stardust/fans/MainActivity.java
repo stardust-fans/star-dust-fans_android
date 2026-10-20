@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Outline;
 import android.net.Uri;
@@ -16,6 +15,8 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewOutlineProvider;
+import android.view.ViewGroup;
+import android.view.Gravity;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -25,12 +26,18 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.JavascriptInterface;
+import android.os.Message;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.app.AlertDialog;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+import android.content.ClipData;
 
 /**
- * 主界面：原生顶栏（头像 + 搜索框 + 设置）+ WebView 内容 + 原生底部 dock。
+ * 主界面：原生顶栏与页面菜单、WebView 内容和五项原生导航。
  *
  * 内容仍然是站点本身（不打包前端副本），这样登录 cookie、投稿、评论、上传都天然可用；
  * 原生层负责 App 的外观与导航，并把站点自带的导航栏隐藏掉，避免两层导航。
@@ -38,28 +45,7 @@ import android.widget.TextView;
 public final class MainActivity extends Activity {
     private static final String TAG = "StarDustMain";
     private static final String BASE = ApiClient.BASE;
-
-    /** dock 顺序（从左到右）：视频 / 同人 / 量贩 / 论坛 / 我的 */
-    private static final String[] ROUTES = {"/videos", "/fanart", "/shop", "/omew", "/user"};
-    private static final int[] TAB_IDS = {
-            R.id.tab_videos, R.id.tab_fanart, R.id.tab_shop, R.id.tab_forum, R.id.tab_my
-    };
-    /** 「我的」在最右侧 */
-    private static final int TAB_MY = 4;
-    /** 默认落在「视频」 */
     private static final int DEFAULT_TAB = 0;
-
-    /** 隐藏站点自带的导航栏与 Live2D 悬浮角色，避免和我们自己的 UI 打架 */
-    private static final String HIDE_SITE_CHROME_JS =
-            "(function(){"
-                    + "var css='.navbar{display:none !important}'"
-                    + "+'#app{padding-top:0 !important}'"
-                    + "+'[class*=\"live2d\"]{display:none !important}';"
-                    + "var s=document.getElementById('__sd_app_css');"
-                    + "if(!s){s=document.createElement('style');s.id='__sd_app_css';"
-                    + "(document.head||document.documentElement).appendChild(s);}"
-                    + "s.textContent=css;"
-                    + "})();";
 
     private static final int REQ_FILE_CHOOSER = 4001;
 
@@ -68,6 +54,8 @@ public final class MainActivity extends Activity {
     private View errorView;
     private TextView errorText;
     private ImageView avatarView;
+    private LinearLayout dock;
+    private SiteContract contract;
 
     private ValueCallback<Uri[]> pendingFileCallback;
     private int currentTab = -1;
@@ -101,6 +89,16 @@ public final class MainActivity extends Activity {
         errorView = findViewById(R.id.error_view);
         errorText = findViewById(R.id.error_text);
         avatarView = findViewById(R.id.top_avatar);
+        dock = findViewById(R.id.bottom_dock);
+
+        try {
+            contract = SiteContract.load(this);
+            if (!BASE.equals(contract.origin)) throw new org.json.JSONException("Site origin mismatch");
+        } catch (Exception e) {
+            Toast.makeText(this, "站点导航配置不可用", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
         setupTopBar();
         setupDock();
@@ -134,64 +132,107 @@ public final class MainActivity extends Activity {
                 outline.setOval(0, 0, view.getWidth(), view.getHeight());
             }
         });
-        // 点头像 = 进「我的」（最右侧那个 tab）
-        avatarView.setOnClickListener(v -> selectTab(TAB_MY));
+        // 头像打开契约定义的用户页。
+        avatarView.setOnClickListener(v -> selectAccountTab());
 
         findViewById(R.id.top_search).setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, SearchActivity.class)));
 
         findViewById(R.id.top_settings).setOnClickListener(v -> openSettings());
+        findViewById(R.id.top_pages).setOnClickListener(v -> showAllPages());
+        findViewById(R.id.error_retry).setOnClickListener(v -> {
+            errorView.setVisibility(View.GONE);
+            webView.reload();
+        });
     }
 
     private void setupDock() {
-        for (int i = 0; i < TAB_IDS.length; i++) {
+        dock.removeAllViews();
+        for (int i = 0; i < contract.tabs.size(); i++) {
+            SiteContract.Entry item = contract.tabs.get(i);
+            TextView tab = new TextView(this);
+            tab.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+            tab.setGravity(Gravity.CENTER);
+            tab.setText(item.title);
+            tab.setTextSize(10);
+            tab.setCompoundDrawablePadding(Math.round(3 * getResources().getDisplayMetrics().density));
+            int icon = tabIcon(item.symbol);
+            if (icon != 0) tab.setCompoundDrawablesWithIntrinsicBounds(0, icon, 0, 0);
+            tab.setTextColor(getResources().getColor(R.color.dock_inactive, getTheme()));
+            tab.setBackgroundResource(android.R.drawable.list_selector_background);
             final int index = i;
-            View tab = findViewById(TAB_IDS[i]);
-            if (tab != null) {
-                tab.setOnClickListener(v -> selectTab(index));
-            }
+            tab.setOnClickListener(v -> selectTab(index));
+            dock.addView(tab);
         }
+        updateDockState();
     }
 
     private void selectTab(int index) {
-        if (index < 0 || index >= ROUTES.length) {
+        if (contract == null || index < 0 || index >= contract.tabs.size()) {
             return;
         }
         currentTab = index;
         updateDockState();
 
-        String target = BASE + ROUTES[index];
+        String target = BASE + contract.tabs.get(index).path;
         String current = webView.getUrl();
-        if (current == null || !current.startsWith(target)) {
+        if (current == null || !NavigationPolicy.sameRoute(current, contract.tabs.get(index).path)) {
             webView.loadUrl(target);
         }
     }
 
-    /** 根据当前 URL 反推高亮哪个 dock 项（通知深链、页面跳转后调用） */
-    private void syncTabFromUrl(String url) {
-        if (url == null) {
-            return;
-        }
-        for (int i = 0; i < ROUTES.length; i++) {
-            if (url.contains(ROUTES[i])) {
-                currentTab = i;
-                updateDockState();
+    private void selectAccountTab() {
+        for (int i = 0; i < contract.tabs.size(); i++) {
+            if ("user".equals(contract.tabs.get(i).id)) {
+                selectTab(i);
                 return;
             }
         }
     }
 
-    private void updateDockState() {
-        for (int i = 0; i < TAB_IDS.length; i++) {
-            TextView tab = findViewById(TAB_IDS[i]);
-            if (tab == null) {
-                continue;
+    /** 根据当前 URL 反推高亮哪个 dock 项（通知深链、页面跳转后调用） */
+    private void syncTabFromUrl(String url) {
+        if (url == null || contract == null) return;
+        for (int i = 0; i < contract.tabs.size(); i++) {
+            SiteContract.Entry tab = contract.tabs.get(i);
+            if (("omew".equals(tab.id) && NavigationPolicy.isForumUrl(url))
+                    || NavigationPolicy.routeMatches(url, tab.path)) {
+                currentTab = i;
+                updateDockState();
+                return;
             }
+        }
+        currentTab = -1;
+        updateDockState();
+    }
+
+    private void updateDockState() {
+        for (int i = 0; dock != null && i < dock.getChildCount(); i++) {
+            TextView tab = (TextView) dock.getChildAt(i);
             int color = getResources().getColor(
                     i == currentTab ? R.color.dock_active : R.color.dock_inactive, getTheme());
             tab.setTextColor(color);
-            tab.setCompoundDrawableTintList(ColorStateList.valueOf(color));
+            tab.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(color));
         }
+    }
+
+    private static int tabIcon(String symbol) {
+        switch (symbol) {
+            case "play.rectangle": return R.drawable.ic_tab_videos;
+            case "paintpalette": return R.drawable.ic_tab_fanart;
+            case "bag": return R.drawable.ic_tab_shop;
+            case "bubble.left.and.bubble.right": return R.drawable.ic_tab_forum;
+            case "person.crop.circle": return R.drawable.ic_tab_my;
+            default: return 0;
+        }
+    }
+
+    private void showAllPages() {
+        if (contract == null) return;
+        String[] titles = new String[contract.pages.size()];
+        for (int i = 0; i < titles.length; i++) titles[i] = contract.pages.get(i).title;
+        new AlertDialog.Builder(this).setTitle("全部页面").setItems(titles, (dialog, which) ->
+                webView.loadUrl(BASE + contract.pages.get(which).path)).show();
     }
 
     private void openSettings() {
@@ -263,6 +304,7 @@ public final class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(true);
+        settings.setSupportMultipleWindows(true);
         settings.setUserAgentString(settings.getUserAgentString() + " StarDustMobile/1.0");
 
         CookieManager cookieManager = CookieManager.getInstance();
@@ -271,28 +313,31 @@ public final class MainActivity extends Activity {
         cookieManager.setAcceptThirdPartyCookies(webView, true);
         cookieManager.flush();
 
+        webView.addJavascriptInterface(new NavigationBridge(), "StarDustNavigation");
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return handleUrl(request.getUrl());
+                return handleUrl(request.getUrl(), request.isForMainFrame());
             }
 
             @Override
             @SuppressWarnings("deprecation")
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return handleUrl(Uri.parse(url));
+                return handleUrl(Uri.parse(url), true);
             }
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 errorView.setVisibility(View.GONE);
                 progressBar.setVisibility(View.VISIBLE);
+                syncTabFromUrl(url);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
-                view.evaluateJavascript(HIDE_SITE_CHROME_JS, null);
+                view.evaluateJavascript(chromeScript(), null);
                 syncTabFromUrl(url);
             }
 
@@ -301,6 +346,12 @@ public final class MainActivity extends Activity {
                 if (request != null && request.isForMainFrame()) {
                     showError();
                 }
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request,
+                                            android.webkit.WebResourceResponse response) {
+                if (request.isForMainFrame() && response.getStatusCode() >= 400) showError();
             }
         });
 
@@ -322,14 +373,29 @@ public final class MainActivity extends Activity {
                 }
                 pendingFileCallback = callback;
                 try {
-                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType("image/*");
-                    startActivityForResult(Intent.createChooser(intent, "选择图片"), REQ_FILE_CHOOSER);
+                    String[] accepted = params.getAcceptTypes();
+                    java.util.ArrayList<String> types = new java.util.ArrayList<>();
+                    if (accepted != null) for (String type : accepted) {
+                        if (type != null && !type.trim().isEmpty()) types.add(type.trim());
+                    }
+                    if (types.isEmpty() || types.contains("*/*")) {
+                        intent.setType("*/*");
+                    } else if (types.size() == 1) {
+                        intent.setType(types.get(0));
+                    } else {
+                        intent.setType("*/*");
+                        intent.putExtra(Intent.EXTRA_MIME_TYPES, types.toArray(new String[0]));
+                    }
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                            params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
+                    startActivityForResult(intent, REQ_FILE_CHOOSER);
                     return true;
                 } catch (ActivityNotFoundException e) {
+                    pendingFileCallback.onReceiveValue(null);
                     pendingFileCallback = null;
-                    return false;
+                    return true;
                 }
             }
 
@@ -337,31 +403,77 @@ public final class MainActivity extends Activity {
             public void onPermissionRequest(PermissionRequest request) {
                 request.deny();
             }
+
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture,
+                                          Message resultMsg) {
+                WebView popup = new WebView(MainActivity.this);
+                popup.getSettings().setJavaScriptEnabled(true);
+                popup.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView popupView, WebResourceRequest request) {
+                        Uri uri = request.getUrl();
+                        if (request.isForMainFrame()) {
+                            if (NavigationPolicy.isInternalMainFrame(uri.toString())) {
+                                webView.loadUrl(uri.toString());
+                            } else {
+                                handleUrl(uri, true);
+                            }
+                        }
+                        popupView.destroy();
+                        return true;
+                    }
+                });
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(popup);
+                resultMsg.sendToTarget();
+                return true;
+            }
         });
     }
 
-    private boolean handleUrl(Uri uri) {
-        if (uri == null) {
-            return false;
-        }
-        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
-        String host = uri.getHost() == null ? "" : uri.getHost();
+    private String chromeScript() {
+        return "(function(){var s=document.getElementById('__sd_app_css');"
+                + "if(!s){s=document.createElement('style');s.id='__sd_app_css';"
+                + "(document.head||document.documentElement).appendChild(s);}s.textContent="
+                + org.json.JSONObject.quote(contract.chromeCss) + ";"
+                + "if(window.__sdHistoryHooked)return;window.__sdHistoryHooked=true;"
+                + "['pushState','replaceState'].forEach(function(k){var f=history[k];history[k]=function(){"
+                + "var r=f.apply(this,arguments);StarDustNavigation.routeChanged(location.href);return r;};});"
+                + "['popstate','hashchange'].forEach(function(k){addEventListener(k,function(){"
+                + "StarDustNavigation.routeChanged(location.href);});});})();";
+    }
 
-        if (("http".equals(scheme) || "https".equals(scheme)) && isInternalHost(host)) {
-            return false;
+    private final class NavigationBridge {
+        @JavascriptInterface
+        public void routeChanged(String url) {
+            runOnUiThread(() -> {
+                String current = webView.getUrl();
+                if (current != null && NavigationPolicy.isInternalMainFrame(current)
+                        && NavigationPolicy.routeKey(current).equals(NavigationPolicy.routeKey(url))) {
+                    syncTabFromUrl(current);
+                }
+            });
         }
+    }
+
+    private boolean handleUrl(Uri uri, boolean mainFrame) {
+        if (uri == null) {
+            return true;
+        }
+        if (!mainFrame) return false;
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
+        if (NavigationPolicy.isInternalMainFrame(uri.toString())) return false;
+        if ((!"http".equals(scheme) && !"https".equals(scheme))
+                || uri.getHost() == null || uri.getUserInfo() != null || uri.getPort() != -1) return true;
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, uri);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } catch (Exception e) {
-            Log.w(TAG, "no handler for " + uri, e);
+            Log.w(TAG, "no handler for external link", e);
         }
         return true;
-    }
-
-    private static boolean isInternalHost(String host) {
-        return "stardustinfinity.top".equals(host) || host.endsWith(".stardustinfinity.top");
     }
 
     private void showError() {
@@ -380,8 +492,7 @@ public final class MainActivity extends Activity {
         if (data == null) {
             return null;
         }
-        String host = data.getHost() == null ? "" : data.getHost();
-        if (!isInternalHost(host)) {
+        if (!NavigationPolicy.isRootDeepLink(data.toString())) {
             return null;
         }
         return data.toString();
@@ -446,8 +557,14 @@ public final class MainActivity extends Activity {
         if (requestCode == REQ_FILE_CHOOSER) {
             if (pendingFileCallback != null) {
                 Uri[] results = null;
-                if (resultCode == RESULT_OK && data != null && data.getData() != null) {
-                    results = new Uri[]{data.getData()};
+                if (resultCode == RESULT_OK && data != null) {
+                    if (data.getClipData() != null) {
+                        ClipData clip = data.getClipData();
+                        results = new Uri[clip.getItemCount()];
+                        for (int i = 0; i < clip.getItemCount(); i++) results[i] = clip.getItemAt(i).getUri();
+                    } else if (data.getData() != null) {
+                        results = new Uri[]{data.getData()};
+                    }
                 }
                 pendingFileCallback.onReceiveValue(results);
                 pendingFileCallback = null;

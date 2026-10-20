@@ -16,6 +16,12 @@ android {
         versionName '1.2.1'
     }
 
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets', '../../../packages/site-contract']
+        }
+    }
+
     buildTypes {
         debug {
             // 自用安装：debug 直接用 debug 签名即可

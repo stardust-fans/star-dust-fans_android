@@ -59,6 +59,19 @@
                 android:padding="9dp"
                 android:src="@drawable/ic_settings"
                 android:tint="@color/dock_inactive" />
+
+            <TextView
+                android:id="@+id/top_pages"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="全部页面"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="☰"
+                android:textColor="@color/dock_inactive"
+                android:textSize="22sp" />
         </LinearLayout>
 
         <!-- ===== 内容区 ===== -->
@@ -119,6 +132,7 @@
             android:background="@color/divider" />
 
         <LinearLayout
+            android:id="@+id/bottom_dock"
             android:layout_width="match_parent"
             android:layout_height="58dp"
             android:background="@color/dock_bg"
@@ -126,35 +140,6 @@
             android:paddingTop="4dp"
             android:paddingBottom="4dp">
 
-            <TextView
-                android:id="@+id/tab_videos"
-                style="@style/DockItem"
-                android:drawableTop="@drawable/ic_tab_videos"
-                android:text="视频" />
-
-            <TextView
-                android:id="@+id/tab_fanart"
-                style="@style/DockItem"
-                android:drawableTop="@drawable/ic_tab_fanart"
-                android:text="同人" />
-
-            <TextView
-                android:id="@+id/tab_shop"
-                style="@style/DockItem"
-                android:drawableTop="@drawable/ic_tab_shop"
-                android:text="量贩" />
-
-            <TextView
-                android:id="@+id/tab_forum"
-                style="@style/DockItem"
-                android:drawableTop="@drawable/ic_tab_forum"
-                android:text="论坛" />
-
-            <TextView
-                android:id="@+id/tab_my"
-                style="@style/DockItem"
-                android:drawableTop="@drawable/ic_tab_my"
-                android:text="我的" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>
