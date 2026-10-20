@@ -1,8 +1,7 @@
 # Findings
 
-- The assigned worktree was clean at `96e4d6b` and fast-forwarded to `main` at `00b4384`.
-- `MainActivity.NavigationBridge.routeChanged` posts work to the UI thread, then dereferences the mutable `webView` field. `onDestroy` destroys and nulls that field. A bridge callback queued before teardown can therefore execute afterward and throw a main-thread `NullPointerException`.
-- File chooser callbacks are released when the picker returns, but not when the Activity is destroyed while the external picker is active. This is a stale callback/liveness issue; no direct application crash path has been established yet.
-- `SearchActivity` already guards posted search results by request generation, finishing, and destroyed state. Avatar and Settings callbacks still post after teardown, but their current view references are retained and do not show the same direct null-dereference path.
-- The bridge callback now requires the captured WebView to remain the current instance and the Activity to remain active both before posting and when the UI-thread work executes. Destroy removes the JavaScript interface and completes any outstanding file-picker callback before destroying the WebView.
-- Focused policy tests pass on the Windows runner, and Gradle `:app:compileDebugJavaWithJavac --offline --rerun-tasks` succeeds against the shared SDK/JDK. No ADB or device access was performed.
+- The previous change used a pure predicate helper only to test object identity and lifecycle booleans. The device teardown stress test is a better validation for this Android callback boundary, so the helper-only test is being removed.
+- Keep the real `NavigationPolicy` tests and inline the WebView identity/lifecycle checks at the callback boundaries.
+- Increment Android versionName and versionCode together to identify the teardown test build without changing signing or application data.
+- The Activity now checks WebView identity and lifecycle directly before posting and before executing the JS route callback. The helper class and synthetic predicate test are removed.
+- Android version metadata now matches at 1.3.1/code 7 in Gradle and the standalone builder. Navigation policy tests and forced offline Gradle Java compilation pass.

@@ -43,8 +43,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $RealRoot 'app\src\main\AndroidManif
 $Package     = 'com.stardust.fans'
 $MinSdk      = 23
 $TargetSdk   = 34
-$VersionCode = 6
-$VersionName = '1.3.0'
+$VersionCode = 7
+$VersionName = '1.3.1'
 $ApkName     = 'star-dust-mobile.apk'
 
 $BuildToolsUrl = 'https://dl.google.com/android/repository/build-tools_r36_windows.zip'
