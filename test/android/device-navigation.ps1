@@ -12,7 +12,11 @@ $results = [Collections.Generic.List[object]]::new()
 
 function Invoke-Adb([string[]]$Arguments) {
     $value = & $Adb -s $DeviceSerial @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "ADB failed: $($Arguments[0])" }
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        ($value -join "`n") | Set-Content -LiteralPath (Join-Path $outputRoot 'adb-failure.txt') -Encoding utf8
+        throw "ADB $($Arguments[0]) exited with code $exitCode; see adb-failure.txt"
+    }
     return ($value -join "`n")
 }
 function Read-Ui([string]$Name) {
