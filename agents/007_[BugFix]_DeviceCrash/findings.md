@@ -17,5 +17,7 @@
 - A custom platform Instrumentation must start its runner from `onCreate`; status bundles before each case make progress observable while the parent owns device execution.
 - The first hardware run confirmed the dock routes and titles but showed DPAD selection was unreliable for the AlertDialog menu. Select the exact `主页` accessibility node and activate its clickable ancestor instead.
 - The fixture now emits a status update after the tabs, all-pages route, Settings, and Search subcases so a device run shows the last completed navigation boundary.
+- On the target OEM, dialog ListView row and TextView nodes are both reported non-clickable despite being touchable; use the exact row's screen bounds and a pointer tap rather than accessibility ACTION_CLICK.
+- Run fullscreen, picker cancellation, and repeated teardown before navigation so a menu/OEM mismatch cannot prevent the primary native lifecycle checks from running; start a fresh MainActivity afterward.
 - The Activity now checks WebView identity and lifecycle directly before posting and before executing the JS route callback. The helper class and synthetic predicate test are removed.
 - Android version metadata now matches at 1.3.1/code 7 in Gradle and the standalone builder. Navigation policy tests and forced offline Gradle Java compilation pass.
