@@ -10,3 +10,4 @@
 - Top-level external HTTPS links open outside the app only after explicit link activation. Other schemes remain blocked except explicit `mailto:` links; subframe requests are allowed for forum SSO compatibility.
 - Initial navigation is claimed once so valid cold-start URLs take precedence; search API HTTP/decode/network errors are reported separately from successful empty search results.
 - Foreground notification delivery is explicitly enabled for queued fanart/shop notices while their opt-in remains active.
+- Background scheduling is driven from SwiftUI `scenePhase` because scene-based apps do not receive the app-delegate background callback; the scene manifest disables multiple windows to match the one-session UI.

@@ -10,4 +10,5 @@
 - Added regression coverage for forum-host allowlisting, unsafe/custom deep links, fanart/shop destinations, retained WebView ownership, baseline monotonicity, and toggle-generation invalidation.
 - Follow-up launch routing claims the initial tab only once and preserves an already requested incoming route; search now checks HTTP status and distinguishes failed sources from valid empty results. Share sheet identity is stable per URL.
 - Foreground notification presentation now shows banners/list/sound only for still-enabled fanart or shop feeds.
+- SwiftUI scene-phase transitions now stop foreground polling outside the active state and submit best-effort background refresh when entering background; the app declares a single scene for its persistent WebView session.
 - Validation: XML property lists and asset catalog JSON parse successfully; Xcode/Swift toolchain is unavailable on this Windows host, so no simulator build or XCTest execution was possible here. Parent macOS CI must run the shared scheme on iPhone and iPad simulators.
