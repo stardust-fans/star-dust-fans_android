@@ -1,6 +1,6 @@
-# Site contract task plan
-- [x] Read Agent Mode and repository instructions; inspect pinned source routes and relevant interaction surfaces.
-- [x] Define versioned route, tab, feed, search, and WebView CSS contract with source mapping.
-- [x] Add source route fixture and meaningful Node tests for schema, route parity, and scoped CSS.
-- [x] Document coverage and manual device acceptance boundaries.
-- [x] Run requested Node tests, inspect the diff for prohibited markers, and commit owned files.
+# Site contract follow-up plan
+- [x] Inspect pinned admin HTML entry, hash router, and actual public layout spacing rule.
+- [x] Add the admin route entry and its nine hash destinations to the contract and fixture.
+- [x] Split test comparisons between the public and admin routers; test exact chrome spacing selectors.
+- [x] Update coverage documentation and acceptance steps, then run source-backed Node tests.
+- [x] Record findings/progress, inspect staged content, and commit the follow-up.
