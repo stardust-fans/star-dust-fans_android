@@ -19,5 +19,10 @@
 - The fixture now emits a status update after the tabs, all-pages route, Settings, and Search subcases so a device run shows the last completed navigation boundary.
 - On the target OEM, dialog ListView row and TextView nodes are both reported non-clickable despite being touchable; use the exact row's screen bounds and a pointer tap rather than accessibility ACTION_CLICK.
 - Run fullscreen, picker cancellation, and repeated teardown before navigation so a menu/OEM mismatch cannot prevent the primary native lifecycle checks from running; start a fresh MainActivity afterward.
+- Final parent-run instrumentation reported `status=passed` across contract startup, fullscreen exit, picker cancel, pending-callback teardown/late bridge stress, and native tabs/menu/settings/search; all four navigation subcase statuses passed. The teardown sequence exercised 11 Activity destruction/recreation rounds.
+- The final cold launch completed in 445 ms, background resume retained the process, and process recreation completed in 459 ms. The captured app log contained no `FATAL EXCEPTION`, fatal signal, ANR, or native-crash matches; exit-info contained no reason codes 4, 5, or 6. Expected instrumentation-stop and isolated WebView cleanup entries remain in the system exit history.
+- The installed app APK and `outputs/stardust-mobile-1.3.1-debug.apk` have matching SHA-256 `D238E3E153A115E949792C3DB2B498B46439E1FA76B7DF1F951918D07DFA73F5`.
+- README now documents building the instrumentation APK with the same key as the app, installing both APKs, and invoking the runner. The picker test cancels without selecting or uploading a file.
+- Raw run evidence is retained in the workspace's `work/device-test` folder: final instrumentation results, launch timing, resume/recreation checks, exit-info, and app logcat.
 - The Activity now checks WebView identity and lifecycle directly before posting and before executing the JS route callback. The helper class and synthetic predicate test are removed.
 - Android version metadata now matches at 1.3.1/code 7 in Gradle and the standalone builder. Navigation policy tests and forced offline Gradle Java compilation pass.
