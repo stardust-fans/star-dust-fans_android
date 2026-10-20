@@ -59,4 +59,16 @@ npm test
 
 实际账号、论坛、附件上传及通知送达的验收清单见 `packages/site-contract/README.md`。静态测试和构建通过不代表这些线上交互已在真机完成验收。
 
+Android 原生真机测试 APK 可用本机 Android SDK 与 JDK 构建。测试 APK 必须使用与待测应用相同的签名密钥：
+
+```powershell
+./apps/android/build.ps1 -Proxy ''
+./test/android/build-instrumentation.ps1 -SdkRoot $env:ANDROID_HOME -Keystore "apps/android/keys/debug.keystore"
+adb install -r "apps/android/out/star-dust-mobile.apk"
+adb install -r "test/android/instrumentation/device-smoke.apk"
+adb shell am instrument -w -r com.stardust.fans.test/.DeviceSmokeInstrumentation
+```
+
+测试会打开系统文件选择器并立即取消，不会选择或上传文件。所有检查通过时，instrumentation 结果会显示 `status=passed`。
+
 源网站继续在 [网页仓库](https://github.com/stardust-fans/star-dust-fans) 维护与部署。本仓库沿用 AGPL-3.0 许可证。

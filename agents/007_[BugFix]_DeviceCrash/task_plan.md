@@ -1,0 +1,28 @@
+# Android teardown follow-up
+
+- [x] Confirm the branch includes the merged teardown guard and has no local changes.
+- [x] Inline the WebView lifecycle checks and remove the helper-only JVM test.
+- [x] Bump Android version metadata to 1.3.1/code 7.
+- [x] Run scoped tests and review the diff.
+- [x] Commit only assigned paths.
+- [x] Add a platform-only Android instrumentation fixture for production lifecycle, file picker, and fullscreen boundaries.
+- [x] Add a portable APK build helper using the existing SDK/JDK and supplied debug key.
+- [x] Validate source/build helper without ADB.
+- [x] Commit only the requested test paths and audit records.
+- [x] Extend instrumentation to exercise all native tabs, page menu, settings/search, and lifecycle repeat teardown.
+- [x] Correct the file-picker monitor to capture launch intents without intercepting the external picker.
+- [x] Rebuild and statically validate the fixture without ADB.
+- [x] Commit only scoped source and audit files.
+- [x] Drive a known public video query through SearchActivity's native EditText action and verify the rendered result.
+- [x] Ensure the instrumentation runner is started from onCreate and publishes progress before each test.
+- [x] Rebuild and validate the bounded instrumentation update without ADB.
+- [x] Commit the bounded instrumentation update.
+- [x] Replace guessed menu key selection with a UiAutomation accessibility click on the exact home item.
+- [x] Publish native navigation subcase progress and rebuild the fixture.
+- [x] Commit the device-confirmed menu fix.
+- [x] Tap the exact home TextView row by accessibility bounds within the dialog ListView.
+- [x] Rebuild and validate the fixture without device access.
+- [x] Run core lifecycle/media/picker checks before native navigation, then start a fresh Activity for navigation.
+- [x] Commit the device-menu fix as a new commit without amending prior commits.
+- [x] Record the parent-run final device evidence and add concise fixture build/run instructions to README.
+- [x] Verify the final README/audit diff and commit only those assigned paths.

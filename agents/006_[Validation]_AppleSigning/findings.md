@@ -1,0 +1,12 @@
+# Findings
+
+- Starting branch `codex/apple-client` was clean at `7ca0476`; local `main` was `00b4384` and descended from it. Fast-forwarded the task branch to `00b4384` before discovery.
+- The user requested read-only discovery of existing signing material and a no-secret unsigned iOS-device CI artifact. No signing material is to be created, revoked, uploaded, or copied into the repository.
+- Current-user and machine personal certificate stores contain no Apple Development or Apple Distribution signing identity. Apple signing tools (`xcodebuild`, `codesign`, `security`, `zsign`, `fastlane`, and `altool`) are unavailable on this Windows host; only GitHub CLI is available.
+- Repository scan found no provisioning profile, certificate bundle, Fastlane signing configuration, or ExportOptions file. GitHub repository secret names contain no Apple/signing-related entry; organization secret names were unavailable through current GitHub authentication. Secret values were never read.
+- The parent previously performed bounded filename searches of Downloads, Documents/Codex, and OneDrive and found no `.p12` or `.mobileprovision` signing material apart from an unrelated Frida fixture.
+- Existing CI builds only the iOS Simulator target. Added a separate macOS 15/Xcode 16.4 job using `-sdk iphoneos`, `generic/platform=iOS`, and code signing disabled; it zips the Release `StarDust.app` and verifies there is no embedded provisioning profile before upload.
+- A signed iOS IPA remains blocked because the authorized central service has no iOS signing path. No certificate, profile, or new credential was created or uploaded.
+- The authorized central signing service was checked by its documented contract and platform policy. `platform` is limited to `windows` and `macos`; its macOS runner handles Developer ID distribution packages and notarization, with no iOS provisioning-profile or IPA stage. The executor workflows expose macOS and Windows jobs only.
+- The service owner allowlist includes `lsy-404` and `SynthVCopilot`; the `stardust-fans` owner is outside it. Repo enrollment would therefore require an owner-policy change even if an iOS platform path existed. No allowlist or service code was changed.
+- The new CI artifact remains unsigned by design. It is a generic `iphoneos` Release `.app` zip and is not installable on a device until an authorized iOS signing path produces a matching profile-signed IPA.
