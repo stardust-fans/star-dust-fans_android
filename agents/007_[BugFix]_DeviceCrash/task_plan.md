@@ -19,4 +19,4 @@
 - [x] Commit the bounded instrumentation update.
 - [x] Replace guessed menu key selection with a UiAutomation accessibility click on the exact home item.
 - [x] Publish native navigation subcase progress and rebuild the fixture.
-- [ ] Commit the device-confirmed menu fix.
+- [x] Commit the device-confirmed menu fix.

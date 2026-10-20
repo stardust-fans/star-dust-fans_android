@@ -13,3 +13,4 @@
 - Added native search using a fixed public BV query and asserted the rendered result title plus matching result URL. Instrumentation now starts from `onCreate` and publishes case progress. Official API docs confirm the lifecycle: `onCreate` should call `start()` before execution continues in `onStart`. Rebuilt/signed APK and reran navigation policy checks; no device result is claimed.
 - Committed this follow-up as `2c5df57`; generated APK remains untracked and is excluded from source history.
 - Parent-owned hardware execution passed contract startup and all five tabs, then exposed unreliable DPAD selection in the all-pages dialog. Replaced the guessed key sequence with an exact accessible-text click and added navigation subcase status updates. Rebuilt/signed APK and reran static policy checks; no device claim is made by this agent.
+- Committed the menu-selection fix as `3d29654`; the rebuilt APK remains an untracked local artifact for parent-owned execution.
