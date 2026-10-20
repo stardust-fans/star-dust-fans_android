@@ -10,10 +10,12 @@ if ((-not $output.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnore
 }
 New-Item -ItemType Directory -Path $output | Out-Null
 try {
-    & javac -encoding UTF-8 -d $output (Join-Path $javaRoot 'NavigationPolicy.java') (Join-Path $PSScriptRoot 'NavigationPolicyTest.java')
+    & javac -encoding UTF-8 -d $output (Join-Path $javaRoot 'NavigationPolicy.java') (Join-Path $javaRoot 'CallbackPolicy.java') (Join-Path $PSScriptRoot 'NavigationPolicyTest.java') (Join-Path $PSScriptRoot 'CallbackPolicyTest.java')
     if ($LASTEXITCODE -ne 0) { throw 'javac failed' }
     & java -cp $output com.stardust.fans.NavigationPolicyTest
     if ($LASTEXITCODE -ne 0) { throw 'NavigationPolicy tests failed' }
+    & java -cp $output com.stardust.fans.CallbackPolicyTest
+    if ($LASTEXITCODE -ne 0) { throw 'CallbackPolicy tests failed' }
     Write-Output 'NavigationPolicy checks passed.'
 } finally {
     if (Test-Path -LiteralPath $output -PathType Container) {
