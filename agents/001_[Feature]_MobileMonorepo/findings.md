@@ -11,3 +11,7 @@
 - 搜索发现差异：歌曲 API 支持 q/limit/offset，UP 主字段为 owner.name；旧 Android 使用 owner_name 且只读首 1000 条。已通知两个实现 agent 修复。
 - Apple/WebKit 官方资料确认 iOS 默认启用文件上传，自定义 runOpenPanel 在 iOS 18.4 才加入；iOS16 依靠默认平台行为。
 - GitHub Actions 已启用且允许全部 action；checkout/setup-node/setup-java/upload-artifact 已查验当前官方版本并固定到 commit SHA。
+- 实际安卓构建首次在 Oracle javapath shim 下误判 JAVA_HOME；设置已验证的 C:/Program Files/Java/jdk-22 后完整编译、d8、zipalign 与 APK v1/v2/v3 签名验证通过。JDK 自动发现错误交回子任务修复。
+- APK zip 验证含 assets/site.json，契约真正随安装包分发。
+- Apple 首轮集成审查发现 weak WebView 生命周期、脚本序列化、actor 调用、后台超时取消及搜索 API/页面链接混用等问题，已交回作者修复，不将首轮源码视为构建成功。
+- macOS15 官方 runner image 查验 Xcode16.4 与 iOS18.5 iPhone16 / iPad(A16) 可用；CI 固定这组工具链和两个目的地。

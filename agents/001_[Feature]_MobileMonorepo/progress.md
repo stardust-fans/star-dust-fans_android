@@ -8,3 +8,6 @@
 - 加入根文档、包脚本、Git 忽略规则及 Android/macOS 持续集成。首次补丁被工具拒绝（同一路径同时删除新增），拆为两次原子补丁后成功，无数据损失。
 - 官方 Google Android SDK Build Tools36 与 Platform34 下载到 workspace/work，解压到独立 SDK 目录；未移动或覆盖其他 SDK。
 - 浏览器核对线上视频搜索和未登录论坛跳转；未登录任何账号，未进行内容写入。
+- 合并 Android 和 Apple 初稿提交；运行 Android 导航测试通过。
+- 独立 SDK 下真实构建 Android 初稿成功（104.8KB，调试签名）。待版本与审查修复后重建交付。
+- 完成首轮 Apple 独立复核，把具体运行和编译问题返回子任务；增加 iPhone/iPad 双目的地 CI 测试和模拟器 app 工件。

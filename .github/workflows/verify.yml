@@ -52,6 +52,8 @@ jobs:
   apple:
     runs-on: macos-15
     timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Build iPhone and iPad app
@@ -62,5 +64,14 @@ jobs:
       - name: Run Apple model tests
         run: >-
           xcodebuild -project apps/apple/StarDust.xcodeproj -scheme StarDust
-          -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath build/apple
+          -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'
+          -destination 'platform=iOS Simulator,name=iPad (A16),OS=18.5'
+          -derivedDataPath build/apple
           CODE_SIGNING_ALLOWED=NO test
+      - name: Package simulator app
+        run: ditto -c -k --keepParent build/apple/Build/Products/Debug-iphonesimulator/StarDust.app build/apple/StarDust-simulator.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: apple-simulator
+          path: build/apple/StarDust-simulator.zip
+          if-no-files-found: error
