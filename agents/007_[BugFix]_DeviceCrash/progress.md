@@ -14,3 +14,5 @@
 - Committed this follow-up as `2c5df57`; generated APK remains untracked and is excluded from source history.
 - Parent-owned hardware execution passed contract startup and all five tabs, then exposed unreliable DPAD selection in the all-pages dialog. Replaced the guessed key sequence with an exact accessible-text click and added navigation subcase status updates. Rebuilt/signed APK and reran static policy checks; no device claim is made by this agent.
 - Committed the menu-selection fix as `3d29654`; the rebuilt APK remains an untracked local artifact for parent-owned execution.
+- A second hardware run found the OEM exposes the dialog text and row but marks them non-clickable. The fixture now finds exact `android:id/text1` under `android:id/select_dialog_listview`, reads its screen bounds, and taps the center. Core fullscreen, picker, and teardown checks now precede navigation, which starts a fresh MainActivity. Build/sign and static checks pass; no ADB interaction here.
+- Committed the new fixture behavior as `c0e8fdc` without amending earlier commits.

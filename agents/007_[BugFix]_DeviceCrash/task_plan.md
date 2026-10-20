@@ -20,3 +20,7 @@
 - [x] Replace guessed menu key selection with a UiAutomation accessibility click on the exact home item.
 - [x] Publish native navigation subcase progress and rebuild the fixture.
 - [x] Commit the device-confirmed menu fix.
+- [x] Tap the exact home TextView row by accessibility bounds within the dialog ListView.
+- [x] Rebuild and validate the fixture without device access.
+- [x] Run core lifecycle/media/picker checks before native navigation, then start a fresh Activity for navigation.
+- [x] Commit the device-menu fix as a new commit without amending prior commits.

@@ -10,6 +10,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.graphics.Rect;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
@@ -51,20 +52,21 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
             verifyContractLoaded();
             result.putString("passed_1", currentTest);
 
-            beginTest("native_tabs_pages_settings_search");
-            verifyNativeNavigation();
-            result.putString("passed_2", currentTest);
-
             beginTest("fullscreen_back_exit");
             verifyFullscreenBackExit();
-            result.putString("passed_3", currentTest);
+            result.putString("passed_2", currentTest);
 
             beginTest("file_picker_extension_multi_cancel");
             verifyFilePickerCancel();
-            result.putString("passed_4", currentTest);
+            result.putString("passed_3", currentTest);
 
             beginTest("pending_picker_finish_and_late_bridge_stress");
             verifyFinishAndLateBridge();
+            result.putString("passed_4", currentTest);
+
+            activity = startMain();
+            beginTest("native_tabs_pages_settings_search");
+            verifyNativeNavigation();
             result.putString("passed_5", currentTest);
             result.putString("status", "passed");
             finish(Activity.RESULT_OK, result);
@@ -138,7 +140,8 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         int pagesId = activity.getResources().getIdentifier("top_pages", "id", TARGET);
         check(pagesId != 0, "all-pages menu button missing");
         runOnMainSync(() -> check(activity.findViewById(pagesId).performClick(), "all-pages menu did not open"));
-        clickAccessibilityText("主页");
+        waitForIdleSync();
+        tapDialogTextRow("主页");
         waitForRouteAndTitle("/", false);
         sendSubcaseStatus("pages_passed");
 
@@ -148,24 +151,34 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         sendSubcaseStatus("search_passed");
     }
 
-    private void clickAccessibilityText(String exactText) throws Exception {
+    private void tapDialogTextRow(String exactText) throws Exception {
         long deadline = SystemClock.uptimeMillis() + WAIT_MS;
         while (SystemClock.uptimeMillis() < deadline) {
             AccessibilityNodeInfo root = getUiAutomation().getRootInActiveWindow();
             if (root != null) {
                 for (AccessibilityNodeInfo match : root.findAccessibilityNodeInfosByText(exactText)) {
-                    if (match.getText() == null || !exactText.contentEquals(match.getText())) continue;
+                    if (match.getText() == null || !exactText.contentEquals(match.getText())
+                            || !"android:id/text1".equals(match.getViewIdResourceName())) continue;
                     AccessibilityNodeInfo candidate = match;
+                    boolean inDialogList = false;
                     while (candidate != null) {
-                        if (candidate.isClickable()
-                                && candidate.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return;
+                        if ("android:id/select_dialog_listview".equals(candidate.getViewIdResourceName())) {
+                            inDialogList = true;
+                            break;
+                        }
                         candidate = candidate.getParent();
                     }
+                    if (!inDialogList) continue;
+                    Rect bounds = new Rect();
+                    match.getBoundsInScreen(bounds);
+                    if (bounds.isEmpty()) continue;
+                    tapScreenPoint(bounds.exactCenterX(), bounds.exactCenterY());
+                    return;
                 }
             }
             SystemClock.sleep(100);
         }
-        throw new AssertionError("all-pages item not clickable: " + exactText);
+        throw new AssertionError("all-pages row not found: " + exactText);
     }
 
     private void sendSubcaseStatus(String name) {
@@ -384,6 +397,10 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         webView.getLocationOnScreen(location);
         float x = location[0] + Math.max(20, webView.getWidth() / 2f);
         float y = location[1] + 60;
+        tapScreenPoint(x, y);
+    }
+
+    private void tapScreenPoint(float x, float y) {
         long time = SystemClock.uptimeMillis();
         MotionEvent down = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, x, y, 0);
         MotionEvent up = MotionEvent.obtain(time, time + 50, MotionEvent.ACTION_UP, x, y, 0);
