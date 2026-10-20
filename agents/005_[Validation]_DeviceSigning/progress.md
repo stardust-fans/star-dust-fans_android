@@ -11,3 +11,6 @@
 - 受 ACL 保护的本地目录已生成加密 RSA2048 私钥、DPAPI保护密码和验过自签名的 public CSR，未输出材料/密码、未提交到仓库。
 - 2026-10-20：载入项目规则，检查 main 干净、现有 worktree 和已交付工件。
 - 查询 ADB，发现同型号 USB 与无线 transport；开始开发证书和签名环境的只读发现。
+
+- Follow-up after continued idle time: the application UID crash buffer remains empty (0 bytes), and exit-info still has no reason 4/5/6 crash or ANR entries. These private evidence files stay under the workspace work/device-test directory.
+- Central IPA support is now deployed with a pinned private executor after 252 integrated tests. Development certificate/profile exist locally; signed IPA generation awaits the separate signing-center administrator login and encrypted credential import. Current mobile CI f226cc6 has passed contract/navigation, Android and generic iOS-device build jobs; simulator tests are still in progress and are not reported as a final success.
