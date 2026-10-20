@@ -26,9 +26,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
         return true
     }
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        Task { await NotificationService.shared.schedule() }
-    }
 }
 
 private final class RefreshCompletion {
@@ -125,6 +122,7 @@ private final class RefreshCompletion {
 struct RootView: View {
     @AppStorage("notify.interval") private var foregroundInterval = 60
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
     var body: some View {
         Group {
             if let error = model.contractError {
@@ -139,10 +137,16 @@ struct RootView: View {
         .sheet(isPresented: $model.showSettings) { SettingsView() }
         .sheet(isPresented: $model.showAllPages) { PageDirectoryView() }
         .sheet(item: Binding(get: { model.shareURL.map(ShareItem.init) }, set: { model.shareURL = $0?.url })) { item in ShareSheet(items: [item.url]) }
-        .task(id: foregroundInterval) {
-            while !Task.isCancelled {
+        .task(id: "\(foregroundInterval)-\(scenePhase == .active)") {
+            guard scenePhase == .active else { return }
+            while !Task.isCancelled && scenePhase == .active {
                 await NotificationService.shared.poll()
                 try? await Task.sleep(for: .seconds(foregroundInterval * 60))
+            }
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background {
+                Task { await NotificationService.shared.schedule() }
             }
         }
         .onOpenURL { url in
