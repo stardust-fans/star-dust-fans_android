@@ -25,6 +25,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Read pinned website routes
+        run: |
+          commit=$(node -p "require('./packages/site-contract/site.json').webSource.commit")
+          git init "$RUNNER_TEMP/site-source"
+          git -C "$RUNNER_TEMP/site-source" fetch --depth=1 https://github.com/stardust-fans/star-dust-fans.git "$commit"
+          git -C "$RUNNER_TEMP/site-source" checkout --detach FETCH_HEAD
+          echo "WEB_REFERENCE=$RUNNER_TEMP/site-source" >> "$GITHUB_ENV"
       - run: npm test
       - name: Test Android navigation policy
         run: bash test/android/run-navigation-policy.sh
