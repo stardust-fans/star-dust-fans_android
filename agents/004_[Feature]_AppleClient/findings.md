@@ -6,3 +6,5 @@
 - Safari/WebKit cross-site tracking prevention can restrict third-party OMEW identity cookies. The app does not promise forum SSO will succeed on every device/session; real-device validation is needed.
 - `BGAppRefreshTask` timing is controlled by iOS. Alerts cover fanart and shop only; there is no video feed notification path. The initial successful feed read establishes an ID baseline and failures do not establish a false baseline.
 - Xcode is unavailable on the Windows implementation host; macOS simulator build and XCTest remain for the parent CI run.
+- Top-level attachment links under the exact site host are handed to the system browser to support file saving; no download-completion behavior was verified in this Windows-only environment.
+- Top-level external HTTPS links open outside the app only after explicit link activation. Other schemes remain blocked except explicit `mailto:` links; subframe requests are allowed for forum SSO compatibility.
