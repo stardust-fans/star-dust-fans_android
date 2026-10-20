@@ -24,3 +24,5 @@
 - [x] Rebuild and validate the fixture without device access.
 - [x] Run core lifecycle/media/picker checks before native navigation, then start a fresh Activity for navigation.
 - [x] Commit the device-menu fix as a new commit without amending prior commits.
+- [x] Record the parent-run final device evidence and add concise fixture build/run instructions to README.
+- [x] Verify the final README/audit diff and commit only those assigned paths.
