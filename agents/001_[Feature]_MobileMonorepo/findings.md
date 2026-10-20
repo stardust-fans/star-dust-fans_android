@@ -16,3 +16,4 @@
 - Apple 首轮集成审查发现 weak WebView 生命周期、脚本序列化、actor 调用、后台超时取消及搜索 API/页面链接混用等问题，已交回作者修复，不将首轮源码视为构建成功。
 - macOS15 官方 runner image 查验 Xcode16.4 与 iOS18.5 iPhone16 / iPad(A16) 可用；CI 固定这组工具链和两个目的地。
 - macOS CI 39368926817：contract 与 Android Gradle 构建通过；Apple 编译发现 Features.swift 两个 compactMap 泛型推断失败。作者显式标注 SearchHit? 闭包返回类型，并修复 refreshID 的 actor 隔离警告后重新验证。
+- Apple 官方 applicationDidEnterBackground 文档确认采用 scenes 的应用不收到该回调；修正为 SwiftUI scenePhase 在 background 提交任务，前台轮询只在 active 运行，并声明单 scene 以匹配共享 WebView 实例。
