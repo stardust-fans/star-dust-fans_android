@@ -13,5 +13,7 @@
 - The test drives all five dock buttons, waits for their expected routes and page titles, selects the home entry from the all-pages dialog, and launches/closes Settings and Search.
 - The external picker monitor uses the default non-blocking monitor callback, records `ACTION_OPEN_DOCUMENT`, and lets the system picker launch; it no longer expects an external Activity object from the target package.
 - Android-34 compilation, APK packaging/signing with the provided local key path, navigation policy tests, and whitespace checks pass. ADB and device interaction are parent-owned.
+- Search validation must set the native EditText directly and invoke its search editor action so the result does not depend on the phone's active IME; assert both a matching BV URL in the Activity result model and a nonempty rendered `result_title`.
+- A custom platform Instrumentation must start its runner from `onCreate`; status bundles before each case make progress observable while the parent owns device execution.
 - The Activity now checks WebView identity and lifecycle directly before posting and before executing the JS route callback. The helper class and synthetic predicate test are removed.
 - Android version metadata now matches at 1.3.1/code 7 in Gradle and the standalone builder. Navigation policy tests and forced offline Gradle Java compilation pass.

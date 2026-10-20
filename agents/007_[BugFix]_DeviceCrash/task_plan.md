@@ -13,3 +13,7 @@
 - [x] Correct the file-picker monitor to capture launch intents without intercepting the external picker.
 - [x] Rebuild and statically validate the fixture without ADB.
 - [x] Commit only scoped source and audit files.
+- [x] Drive a known public video query through SearchActivity's native EditText action and verify the rendered result.
+- [x] Ensure the instrumentation runner is started from onCreate and publishes progress before each test.
+- [x] Rebuild and validate the bounded instrumentation update without ADB.
+- [x] Commit the bounded instrumentation update.
