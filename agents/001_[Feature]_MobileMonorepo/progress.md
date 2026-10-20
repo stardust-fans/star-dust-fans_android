@@ -16,3 +16,4 @@
 - 调试 APK 复制到用户 outputs/stardust-mobile-1.3.0-debug.apk，SHA256 CF09FF7F9CCE40C3CCDAAEA66F660E27E76F67837B4CEFE407C1E8E9999E60D9。
 - Apple 三轮修复合并：生命周期、脚本注入、并发/基线、后台任务、文件/邮件、搜索错误、冷启动深链优先级、前台通知展示；独立复核确认已知问题得到修复。
 - 推送集成分支以运行真实 macOS CI；先前运行因后续修复被 supersede/cancel。没有创建 PR、没有更改生产网站或数据库。
+- 实际 CI 验证 Linux 契约/路由与 Android Gradle APK 成功；收集 Apple 编译诊断并合并最小类型标注修复，重新推送验证。
