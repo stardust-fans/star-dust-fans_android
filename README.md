@@ -61,7 +61,7 @@ npm test
 
 ### 中央真机签名
 
-仓库管理员需配置 `SIGNING_URL` Actions 变量和 `SIGNING_API_KEY` Actions secret。运行 `iOS signing` workflow 的 `build` 操作会生成 unsigned Xcode archive 并提交签名请求；该次运行结束后，在新的默认分支 dispatch 中选择 `download` 并填写运行摘要中的 request ID。成功后下载 `signed-ipa` artifact，其中包含 `signed.ipa` 和 `verification.json`。workflow 会校验服务报告、归档摘要和 IPA 文件摘要。
+仓库管理员需配置 `SIGNING_API_KEY` Actions secret。在默认分支运行 `iOS signing` workflow 会生成 unsigned Xcode archive 并提交签名请求。完成后，从运行摘要取得 request ID，再由获授权的管理员通过中央签名服务的受保护下载界面取回已签名 IPA；公开仓库的 Actions artifacts 只包含 unsigned archive，不包含签名包。
 
 Android 原生真机测试 APK 可用本机 Android SDK 与 JDK 构建。测试 APK 必须使用与待测应用相同的签名密钥：
 

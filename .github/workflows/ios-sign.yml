@@ -2,19 +2,6 @@ name: iOS signing
 
 on:
   workflow_dispatch:
-    inputs:
-      operation:
-        description: Build and submit, or download a completed signing request
-        type: choice
-        required: true
-        default: build
-        options:
-          - build
-          - download
-      request_id:
-        description: Signing request ID required for download
-        type: string
-        required: false
 
 permissions:
   contents: read
@@ -26,12 +13,11 @@ jobs:
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
-      OPERATION: ${{ inputs.operation }}
+      OPERATION: build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Archive unsigned iOS device app
-        if: inputs.operation == 'build'
         run: |
           mkdir -p build/apple-device
           xcodebuild -project apps/apple/StarDust.xcodeproj -scheme StarDust \
@@ -40,7 +26,6 @@ jobs:
 
       - name: Package unsigned app and source metadata
         id: source
-        if: inputs.operation == 'build'
         env:
           SOURCE_SHA: ${{ github.sha }}
         run: |
@@ -54,7 +39,7 @@ jobs:
           version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")
           stage="$RUNNER_TEMP/ios-sign-input"
           mkdir -p "$stage"
-          ditto -c -k --sequesterRsrc --keepParent "$archive" "$stage/unsigned.xcarchive.zip"
+          ditto -c -k --norsrc --keepParent "$archive" "$stage/unsigned.xcarchive.zip"
           listing=$(unzip -Z1 "$stage/unsigned.xcarchive.zip")
           grep -q '^unsigned\.xcarchive/Info\.plist$' <<< "$listing"
           grep -q '^unsigned\.xcarchive/Products/Applications/StarDust\.app/Info\.plist$' <<< "$listing"
@@ -74,7 +59,6 @@ jobs:
 
       - id: unsigned
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: inputs.operation == 'build'
         with:
           name: unsigned-ios-archive
           path: ${{ runner.temp }}/ios-sign-input/*
@@ -82,38 +66,8 @@ jobs:
           compression-level: 0
 
       - name: Submit source archive to signing service
-        if: inputs.operation == 'build'
         env:
           ARTIFACT_ID: ${{ steps.unsigned.outputs.artifact-id }}
           APP_VERSION: ${{ steps.source.outputs.version }}
-          SIGNING_URL: ${{ vars.SIGNING_URL }}
           SIGNING_API_KEY: ${{ secrets.SIGNING_API_KEY }}
         run: node .github/scripts/ios-sign-api.mjs
-
-      - name: Validate request ID input
-        if: inputs.operation == 'download'
-        env:
-          SIGNING_REQUEST_ID: ${{ inputs.request_id }}
-        run: |
-          if [[ ! "$SIGNING_REQUEST_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
-            echo 'Provide a valid signing request ID.' >&2
-            exit 1
-          fi
-
-      - name: Download and verify signed IPA
-        if: inputs.operation == 'download'
-        env:
-          SIGNING_REQUEST_ID: ${{ inputs.request_id }}
-          SIGNED_IPA_PATH: ${{ runner.temp }}/signed-ipa/signed.ipa
-          VERIFICATION_PATH: ${{ runner.temp }}/signed-ipa/verification.json
-          SIGNING_URL: ${{ vars.SIGNING_URL }}
-          SIGNING_API_KEY: ${{ secrets.SIGNING_API_KEY }}
-        run: node .github/scripts/ios-sign-api.mjs
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: inputs.operation == 'download'
-        with:
-          name: signed-ipa
-          path: ${{ runner.temp }}/signed-ipa/*
-          if-no-files-found: error
-          compression-level: 0
