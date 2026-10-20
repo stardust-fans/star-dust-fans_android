@@ -23,4 +23,4 @@
 - [x] Tap the exact home TextView row by accessibility bounds within the dialog ListView.
 - [x] Rebuild and validate the fixture without device access.
 - [x] Run core lifecycle/media/picker checks before native navigation, then start a fresh Activity for navigation.
-- [ ] Commit the device-menu fix as a new commit without amending prior commits.
+- [x] Commit the device-menu fix as a new commit without amending prior commits.
