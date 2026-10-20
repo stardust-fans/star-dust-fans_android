@@ -18,6 +18,9 @@ public final class NavigationPolicyTest {
         require(!NavigationPolicy.isBilibiliVideoUrl("https://bilibili.com/video/BV1xx411c7mD"));
         require(!NavigationPolicy.isBilibiliVideoUrl("https://www.bilibili.com/video/BV1xx411c7mD?foo=1"));
         require(!NavigationPolicy.isBilibiliVideoUrl("https://www.bilibili.com/video/not-a-bvid"));
+        require(NavigationPolicy.isSiteAttachmentDownload("https://stardustinfinity.top/attachments/a.pdf"));
+        require(!NavigationPolicy.isSiteAttachmentDownload("https://stardustinfinity.top.evil.example/attachments/a.pdf"));
+        require(!NavigationPolicy.isSiteAttachmentDownload("https://stardustinfinity.top:8443/attachments/a.pdf"));
         require(!NavigationPolicy.isInternalMainFrame("javascript:alert(1)"));
         require(NavigationPolicy.routeMatches("https://stardustinfinity.top/videos?id=1", "/videos"));
         require(NavigationPolicy.routeMatches("https://stardustinfinity.top/videos/item/1", "/videos"));

@@ -43,8 +43,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $RealRoot 'app\src\main\AndroidManif
 $Package     = 'com.stardust.fans'
 $MinSdk      = 23
 $TargetSdk   = 34
-$VersionCode = 5
-$VersionName = '1.2.1'
+$VersionCode = 6
+$VersionName = '1.3.0'
 $ApkName     = 'star-dust-mobile.apk'
 
 $BuildToolsUrl = 'https://dl.google.com/android/repository/build-tools_r36_windows.zip'
@@ -86,12 +86,31 @@ function Disable-AsciiRoot([string]$Drive) {
 # ---------------------------------------------------------------- SDK 定位
 
 function Get-JavaHome {
-    if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME 'bin\javac.exe'))) {
+    if (($env:JAVA_HOME) -and (Test-Path (Join-Path $env:JAVA_HOME 'bin\java.exe')) -and
+            (Test-Path (Join-Path $env:JAVA_HOME 'bin\javac.exe'))) {
         return $env:JAVA_HOME
+    }
+    if ($env:JAVA_HOME) {
+        throw 'JAVA_HOME does not point to a JDK containing bin\javac.exe'
+    }
+    $java = Get-Command java.exe -ErrorAction SilentlyContinue
+    if ($java) {
+        $details = (& $java.Source -XshowSettings:properties -version 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -and $details -match '(?m)^\s*java\.home\s*=\s*(.+?)\s*$') {
+            $candidate = $Matches[1].Trim()
+            if ((Test-Path (Join-Path $candidate 'bin\java.exe')) -and
+                    (Test-Path (Join-Path $candidate 'bin\javac.exe'))) {
+                return $candidate
+            }
+        }
     }
     $javac = Get-Command javac.exe -ErrorAction SilentlyContinue
     if ($javac) {
-        return (Split-Path -Parent (Split-Path -Parent $javac.Source))
+        $candidate = Split-Path -Parent (Split-Path -Parent $javac.Source)
+        if ((Test-Path (Join-Path $candidate 'bin\java.exe')) -and
+                (Test-Path (Join-Path $candidate 'bin\javac.exe'))) {
+            return $candidate
+        }
     }
     throw '找不到 JDK（需要 JAVA_HOME 或 PATH 里有 javac）'
 }

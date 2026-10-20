@@ -43,6 +43,14 @@ final class NavigationPolicy {
                 && uri.getUserInfo() == null && uri.getPort() == -1;
     }
 
+    static boolean isSiteAttachmentDownload(String value) {
+        URI uri = parse(value);
+        return uri != null && "https".equalsIgnoreCase(uri.getScheme())
+                && "stardustinfinity.top".equalsIgnoreCase(uri.getHost())
+                && uri.getUserInfo() == null && uri.getPort() == -1
+                && uri.getRawPath() != null && uri.getRawPath().startsWith("/attachments/");
+    }
+
     static boolean isBilibiliVideoUrl(String value) {
         URI uri = parse(value);
         if (uri == null || !"https".equalsIgnoreCase(uri.getScheme())

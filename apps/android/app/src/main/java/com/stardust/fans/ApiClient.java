@@ -15,10 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
-/**
- * Read-only client for site search and fanart/shop notification feeds.
- */
 final class ApiClient {
     private static final String TAG = "StarDustApi";
 
@@ -83,7 +81,6 @@ final class ApiClient {
         }
     }
 
-    /** 当前最大 id，用于首次建立基线；空列表返回 0 */
     static long maxId(String type) throws Exception {
         JSONArray array = fetchArray(type);
         long max = 0L;
@@ -100,7 +97,6 @@ final class ApiClient {
         return max;
     }
 
-    /** 比 lastId 更新的条目，按 id 升序（先发布的先通知） */
     static List<Item> fetchNewItems(String type, long lastId) throws Exception {
         JSONArray array = fetchArray(type);
         List<Item> items = new ArrayList<>();
@@ -127,10 +123,6 @@ final class ApiClient {
         return items;
     }
 
-    // ============================================================
-    // 头像 / 资料：WebView 里的登录态是 cookie，这里由调用方把 token 传进来
-    // ============================================================
-
     static final class Profile {
         final String avatarUrl;
         final String displayName;
@@ -141,7 +133,6 @@ final class ApiClient {
         }
     }
 
-    /** 读取当前登录用户资料；未登录 / 失败返回 null */
     static Profile fetchProfile(String token) {
         if (token == null || token.isEmpty()) {
             return null;
@@ -205,10 +196,6 @@ final class ApiClient {
         }
     }
 
-    // ============================================================
-    // 搜索：视频（歌曲）/ 同人 / 量贩，全部走公开接口
-    // ============================================================
-
     static final class SearchResult {
         final String type;
         final String title;
@@ -231,10 +218,9 @@ final class ApiClient {
         return value;
     }
 
-    /** Searches site content; notification polling uses only fanart and shop. */
     static List<SearchResult> search(String keyword, SiteContract contract) {
         List<SearchResult> results = new ArrayList<>();
-        String kw = keyword == null ? "" : keyword.trim().toLowerCase();
+        String kw = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         if (kw.isEmpty()) {
             return results;
         }
@@ -262,7 +248,8 @@ final class ApiClient {
                 JSONObject ownerObject = object.optJSONObject("owner");
                 String owner = ownerObject == null ? "" : str(ownerObject, "name", "");
                 String bvid = str(object, "bvid", "");
-                if ((title.toLowerCase().contains(kw) || owner.toLowerCase().contains(kw)
+                if ((title.toLowerCase(Locale.ROOT).contains(kw)
+                        || owner.toLowerCase(Locale.ROOT).contains(kw)
                         || bvid.toLowerCase().contains(kw)) && bvid.matches("BV[0-9A-Za-z]+")) {
                     out.add(new SearchResult(
                             "视频",
@@ -290,7 +277,8 @@ final class ApiClient {
                 String subtitle = fanart
                         ? str(object, "author", "匿名")
                         : str(object, "price", "价格待定");
-                if (title.toLowerCase().contains(kw) || subtitle.toLowerCase().contains(kw)) {
+                if (title.toLowerCase(Locale.ROOT).contains(kw)
+                        || subtitle.toLowerCase(Locale.ROOT).contains(kw)) {
                     out.add(new SearchResult(
                             fanart ? "同人" : "量贩",
                             title.isEmpty() ? "无题" : title,
