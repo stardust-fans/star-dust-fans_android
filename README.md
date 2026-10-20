@@ -59,6 +59,10 @@ npm test
 
 实际账号、论坛、附件上传及通知送达的验收清单见 `packages/site-contract/README.md`。静态测试和构建通过不代表这些线上交互已在真机完成验收。
 
+### 中央真机签名
+
+仓库管理员需配置 `SIGNING_API_KEY` Actions secret。在默认分支运行 `iOS signing` workflow 会生成 unsigned Xcode archive 并提交签名请求。完成后，从运行摘要取得 request ID，再由获授权的管理员通过中央签名服务的受保护下载界面取回已签名 IPA；公开仓库的 Actions artifacts 只包含 unsigned archive，不包含签名包。
+
 Android 原生真机测试 APK 可用本机 Android SDK 与 JDK 构建。测试 APK 必须使用与待测应用相同的签名密钥：
 
 ```powershell
