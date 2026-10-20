@@ -11,3 +11,5 @@
 - 受 ACL 保护的本地目录已生成加密 RSA2048 私钥、DPAPI保护密码和验过自签名的 public CSR，未输出材料/密码、未提交到仓库。
 - 2026-10-20：载入项目规则，检查 main 干净、现有 worktree 和已交付工件。
 - 查询 ADB，发现同型号 USB 与无线 transport；开始开发证书和签名环境的只读发现。
+- 最新进度：Android 实机 instrumentation 与安装验收通过。iOS 的 broker smoke 通过，但 Xcode license/first-launch 未完成；请求使用的旧 recipe 已失效，preflight 失败未释放证书，故尚无签名 IPA。Mac 完成首次初始化后确认 recipe 4 已激活并启动全新 attempt 1；随后重新连接并解锁 iPhone，再核验/安装/验收。
+- 上文早期“Apple 登录/2FA 仍待完成”是历史状态，现已由证书、profile、私有 runner 与中心签名配置取代；当前阻塞是 Mac 本地 Xcode 首次启动/许可，而不是身份材料或中央入口缺失。
