@@ -9,3 +9,7 @@
 - [x] Add a portable APK build helper using the existing SDK/JDK and supplied debug key.
 - [x] Validate source/build helper without ADB.
 - [x] Commit only the requested test paths and audit records.
+- [x] Extend instrumentation to exercise all native tabs, page menu, settings/search, and lifecycle repeat teardown.
+- [x] Correct the file-picker monitor to capture launch intents without intercepting the external picker.
+- [x] Rebuild and statically validate the fixture without ADB.
+- [x] Commit only scoped source and audit files.
