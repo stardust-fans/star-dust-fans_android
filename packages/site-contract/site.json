@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "origin": "https://stardustinfinity.top",
+  "webSource": {
+    "repository": "https://github.com/stardust-fans/star-dust-fans",
+    "commit": "cf7f6f7c5f399d17340f00542e1591a160a18914"
+  },
+  "tabs": [
+    { "id": "videos", "title": "视频", "path": "/videos", "symbol": "play.rectangle" },
+    { "id": "fanart", "title": "同人", "path": "/fanart", "symbol": "paintpalette" },
+    { "id": "shop", "title": "量贩", "path": "/shop", "symbol": "bag" },
+    { "id": "omew", "title": "论坛", "path": "/omew", "symbol": "bubble.left.and.bubble.right" },
+    { "id": "user", "title": "我的", "path": "/user", "symbol": "person.crop.circle" }
+  ],
+  "pages": [
+    { "id": "home", "title": "主页", "path": "/", "section": "discover", "entry": true },
+    { "id": "videos", "title": "视频", "path": "/videos", "section": "discover", "entry": true },
+    { "id": "daily", "title": "日报", "path": "/daily", "section": "discover", "entry": true },
+    { "id": "fanart", "title": "同人", "path": "/fanart", "section": "content", "entry": true },
+    { "id": "fanart-detail", "title": "同人详情", "path": "/fanart/:id", "section": "content", "entry": false },
+    { "id": "shop", "title": "量贩", "path": "/shop", "section": "content", "entry": true },
+    { "id": "shop-detail", "title": "量贩详情", "path": "/shop/:id", "section": "content", "entry": false },
+    { "id": "starmap", "title": "星图", "path": "/starmap", "section": "discover", "entry": true },
+    { "id": "omew", "title": "论坛", "path": "/omew", "section": "content", "entry": true },
+    { "id": "about", "title": "关于", "path": "/about", "section": "system", "entry": true },
+    { "id": "login", "title": "登录", "path": "/login", "section": "account", "entry": true },
+    { "id": "change-username", "title": "修改用户名", "path": "/change-username", "section": "account", "entry": true },
+    { "id": "register", "title": "注册", "path": "/register", "section": "account", "entry": true },
+    { "id": "guide", "title": "指南", "path": "/guide", "section": "system", "entry": true },
+    { "id": "user", "title": "我的", "path": "/user", "section": "account", "entry": true },
+    { "id": "user-public", "title": "用户主页", "path": "/user/:id", "section": "account", "entry": false },
+    { "id": "settings", "title": "设置", "path": "/settings", "section": "account", "entry": true },
+    { "id": "fallback", "title": "无法访问", "path": "/fallback", "section": "system", "entry": false },
+    { "id": "aspirateur", "title": "吸尘器", "path": "/aspirateur", "section": "system", "entry": true }
+  ],
+  "notificationFeeds": [
+    { "id": "fanart", "path": "/api/fanart", "detailPath": "/fanart/", "title": "同人" },
+    { "id": "shop", "path": "/api/shop", "detailPath": "/shop/", "title": "量贩" }
+  ],
+  "search": {
+    "videos": "/api/songs",
+    "fanart": "/api/fanart",
+    "shop": "/api/shop"
+  },
+  "chromeCSS": ".navbar, .live2d-companion { display: none !important; }\n.omew-stage { top: 0 !important; }"
+}
