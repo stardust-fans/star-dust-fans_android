@@ -1,0 +1,6 @@
+[
+  "/", "/videos", "/daily", "/fanart", "/shop", "/starmap", "/omew",
+  "/about", "/login", "/change-username", "/register", "/fanart/:id",
+  "/shop/:id", "/guide", "/user", "/settings", "/fallback", "/aspirateur",
+  "/user/:id"
+]
