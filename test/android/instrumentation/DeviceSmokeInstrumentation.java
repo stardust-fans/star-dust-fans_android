@@ -13,12 +13,17 @@ import android.view.ViewGroup;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebChromeClient;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,28 +35,34 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
     private Activity activity;
 
     @Override
+    public void onCreate(Bundle arguments) {
+        super.onCreate(arguments);
+        start();
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
         Bundle result = new Bundle();
         try {
-            currentTest = "cold_main_contract_load";
+            beginTest("cold_main_contract_load");
             activity = startMain();
             verifyContractLoaded();
             result.putString("passed_1", currentTest);
 
-            currentTest = "native_tabs_pages_settings_search";
+            beginTest("native_tabs_pages_settings_search");
             verifyNativeNavigation();
             result.putString("passed_2", currentTest);
 
-            currentTest = "fullscreen_back_exit";
+            beginTest("fullscreen_back_exit");
             verifyFullscreenBackExit();
             result.putString("passed_3", currentTest);
 
-            currentTest = "file_picker_extension_multi_cancel";
+            beginTest("file_picker_extension_multi_cancel");
             verifyFilePickerCancel();
             result.putString("passed_4", currentTest);
 
-            currentTest = "pending_picker_finish_and_late_bridge_stress";
+            beginTest("pending_picker_finish_and_late_bridge_stress");
             verifyFinishAndLateBridge();
             result.putString("passed_5", currentTest);
             result.putString("status", "passed");
@@ -65,6 +76,13 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         } finally {
             closeActivity();
         }
+    }
+
+    private void beginTest(String name) {
+        currentTest = name;
+        Bundle status = new Bundle();
+        status.putString("current_test", name);
+        sendStatus(0, status);
     }
 
     private Activity startMain() {
@@ -112,7 +130,7 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         for (int index = 0; index < routes.length; index++) {
             final int tabIndex = index;
             runOnMainSync(() -> check(tabs.getChildAt(tabIndex).performClick(), "native tab click failed"));
-            waitForRouteAndTitle(routes[index], index == 4);
+            waitForRouteAndTitle(routes[index], index >= 3);
         }
 
         int pagesId = activity.getResources().getIdentifier("top_pages", "id", TARGET);
@@ -123,7 +141,7 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         waitForRouteAndTitle("/", false);
 
         openNativeActivity("top_settings", "com.stardust.fans.SettingsActivity");
-        openNativeActivity("top_search", "com.stardust.fans.SearchActivity");
+        verifyNativeSearch();
     }
 
     private void openNativeActivity(String idName, String className) throws Exception {
@@ -143,19 +161,73 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
         }
     }
 
-    private void waitForRouteAndTitle(String expectedPath, boolean allowLogin) throws Exception {
-        WebView webView = (WebView) readField(activity, "webView");
-        long deadline = SystemClock.uptimeMillis() + WAIT_MS;
+    private void verifyNativeSearch() throws Exception {
+        int buttonId = activity.getResources().getIdentifier("top_search", "id", TARGET);
+        check(buttonId != 0, "top_search button missing");
+        ActivityMonitor monitor = new ActivityMonitor("com.stardust.fans.SearchActivity", null, false);
+        addMonitor(monitor);
+        try {
+            runOnMainSync(() -> check(activity.findViewById(buttonId).performClick(), "top_search click failed"));
+            Activity opened = monitor.waitForActivityWithTimeout(WAIT_MS);
+            check(opened != null && "com.stardust.fans.SearchActivity".equals(opened.getClass().getName()),
+                    "SearchActivity did not open");
+            int inputId = opened.getResources().getIdentifier("search_input", "id", TARGET);
+            int listId = opened.getResources().getIdentifier("search_results", "id", TARGET);
+            int titleId = opened.getResources().getIdentifier("result_title", "id", TARGET);
+            check(inputId != 0 && listId != 0 && titleId != 0, "native search views missing");
+
+            runOnMainSync(() -> {
+                EditText input = opened.findViewById(inputId);
+                input.setText("BV1L1bj6mEtC");
+                input.onEditorAction(EditorInfo.IME_ACTION_SEARCH);
+            });
+            waitForSearchResult(opened, listId, titleId);
+            runOnMainSync(opened::finish);
+            waitForMainResumed();
+        } finally {
+            removeMonitor(monitor);
+        }
+    }
+
+    private void waitForSearchResult(Activity search, int listId, int titleId) throws Exception {
+        long deadline = SystemClock.uptimeMillis() + 15000;
         while (SystemClock.uptimeMillis() < deadline) {
             String[] state = new String[2];
             runOnMainSync(() -> {
-                state[0] = webView.getUrl();
-                state[1] = webView.getTitle();
+                ListView list = search.findViewById(listId);
+                state[0] = list.getAdapter() == null ? "0" : Integer.toString(list.getAdapter().getCount());
+                View first = list.getChildCount() == 0 ? null : list.getChildAt(0);
+                TextView title = first == null ? null : first.findViewById(titleId);
+                state[1] = title == null ? null : title.getText().toString().trim();
             });
-            String path = state[0] == null ? null : Uri.parse(state[0]).getPath();
-            boolean routeMatches = expectedPath.equals(path)
-                    || (allowLogin && "/login".equals(path));
-            if (routeMatches && state[1] != null && !state[1].trim().isEmpty()) return;
+            if (Integer.parseInt(state[0]) > 0 && state[1] != null && !state[1].isEmpty()) {
+                Object rawResults = readField(search, "results");
+                check(rawResults instanceof List, "search result model missing");
+                boolean foundVideo = false;
+                for (Object item : (List<?>) rawResults) {
+                    Object url = readField(item, "url");
+                    if (url instanceof String && ((String) url).contains("BV1L1bj6mEtC")) {
+                        foundVideo = true;
+                        break;
+                    }
+                }
+                check(foundVideo, "query result did not include the requested public video");
+                return;
+            }
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("native search did not render a result title");
+    }
+
+    private void waitForRouteAndTitle(String expectedPath, boolean allowLogin) throws Exception {
+        WebView webView = (WebView) readField(activity, "webView");
+        long deadline = SystemClock.uptimeMillis() + WAIT_MS;
+        String acceptedRoute = "location.pathname===" + org.json.JSONObject.quote(expectedPath);
+        if (allowLogin) acceptedRoute += "||location.pathname==='/login'";
+        String script = "document.readyState==='complete'&&(" + acceptedRoute
+                + ")&&document.title.trim().length>0";
+        while (SystemClock.uptimeMillis() < deadline) {
+            if ("true".equals(evaluate(webView, script))) return;
             SystemClock.sleep(100);
         }
         throw new AssertionError("route or page title did not load: " + expectedPath);
