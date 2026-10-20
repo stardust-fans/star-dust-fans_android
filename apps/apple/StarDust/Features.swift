@@ -241,6 +241,13 @@ import UserNotifications
 
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        let identifier = notification.request.identifier
+        let enabled = ["fanart", "shop"].contains { feedID in
+            identifier.hasPrefix("\(feedID)-") && FeedPreferenceStore.shared.snapshot(feedID: feedID).enabled
+        }
+        completionHandler(enabled ? [.banner, .list, .sound] : [])
+    }
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if let path = response.notification.request.content.userInfo["path"] as? String,
            path.hasPrefix("/"), !path.hasPrefix("//"), !path.contains("\\") {
