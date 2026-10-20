@@ -10,3 +10,5 @@
 - 首次 instrumentation 中 contract/WebView 初始化与五个 dock tab 通过，菜单 DPAD 猜测没有选到主页而中止 -> 修正为按原生无障碍文字点击菜单项；保持断言不变。完成 instrumentation 时系统 force-stop exit 原因为 finished inst，启动时为 start instr，均不计为崩溃。
 - 合并测试分支时对方重写了前一提交，产生 fixture/audit 冲突 -> 以作者最新已审核 fixture 完整版本解决四个冲突并重新编译 -> 成功。冲突状态的首次编译失败未执行到设备。
 - 不再保留本次新增的 UIAutomator 全网页树导航脚本；使用实际 instrumentation 入口，避免同一个页面 dump 问题成为长期脆弱测试。
+- Android 真机验证已完成并通过，无需重跑。iOS 仍未签出 IPA：private GitEdge macOS broker native smoke 通过，但 Mac 的 Xcode 许可/首次启动尚未完成；只读 `sudo -n -l <xcodebuild> -runFirstLaunch` 权限检查被拒，未尝试 sudo 初始化。最新 recipe 4 为 `ios-runner-2026-10-20-4` / `a1883cd3042a05c7448a9c714d49070a423cc966`，中心部署 `0a786f49-bb6d-44e1-9ace-57825b9a7449`。此前请求依赖失效的 recipe 3；后续须使用 recipe 4 新开 attempt 1。诊断 probe 成功不代表签名工具链 ready；两次实际 native preflight 失败且未释放证书。iPhone 已登记但目前未连接 USB，profile 当前覆盖两台登记设备。
+- 早期关于“尚无 iOS 入口/等待用户确认”的记录已被后续授权与中央服务实现取代；当前仅 Xcode 首启许可和设备连接仍阻塞真机验收。
