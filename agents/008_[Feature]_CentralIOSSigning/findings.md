@@ -1,0 +1,9 @@
+# Findings
+
+- The Apple app bundle identifier is `top.stardustinfinity.mobile`, app version is `1.3.0`, and the generic device Release build already exists in the mobile verification workflow.
+- The Xcode archive is unsigned and uses `unsigned.xcarchive/` as its nested ZIP root. The uploaded artifact ZIP contains exactly `unsigned.xcarchive.zip` and `source.json`; source metadata has only `platform`, `architecture`, `bundle_id`, `version`, and `source_sha`, with architecture `arm64`.
+- Control plane: `POST /v1/requests` accepts project `stardust-ios`, platform `ios`, run id/attempt, artifact id, version, source SHA, and `execution_visibility: auto`. It uses Bearer authentication and `Idempotency-Key`. Submit returns `request_id`; status returns `request_id`, `state`, and `output`.
+- Build and download are separate dispatches because artifact transfer is pull-based. The build dispatch submits the artifact and exits; a later dispatch retrieves the signed result.
+- Download returns `application/zip`, `X-Signing-Archive-Digest: sha256:<hex>`, and exactly `signed.ipa` plus `verification.json`. The status response includes `output.archive_digest`, `output.archive_size`, and `output.report`; the workflow verifies the response header/body against the status digest, the sidecar against the status report, and the IPA size/SHA against `report.files[0]`.
+- Central signing uses the fixed Xcode `-exportArchive` recipe. The workflow does not manually codesign or repackage the output IPA.
+- The local Windows host lacks `unzip`; archive extraction positive/negative tests are enabled on non-Windows CI, while request, API failure, digest-header, and report validation tests run locally.
