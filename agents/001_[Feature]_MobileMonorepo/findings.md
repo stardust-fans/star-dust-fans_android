@@ -5,3 +5,9 @@
 - 网页来源：https://github.com/stardust-fans/star-dust-fans；只读参考克隆位于当前工作区 work/web-reference。
 - 当前主机 Windows，已有 git、gh、Node、Java；未发现 swift/xcodebuild 或默认位置 Android SDK。
 - 用户确认保留 WebView 架构；所有网页功能复用站点，原生层补全入口、文件选择、导航、错误恢复和系统通知。
+- 网页完整路由核对结果：19 个公开路由；独立管理入口 /admin/index.html 及 9 个后台 hash 模块。契约测试与固定来源版本直接比对。
+- 线上只读 HTTP 检查：首页、视频、同人、量贩、日报、星图、管理入口均 200；公开搜索、同人、量贩 API 均返回 JSON 200。只读检查不证明账号或写入流程成功。
+- 浏览器验证：视频页面显示 1307 首、109 页，已知 BV 搜索得到一条精确结果；未登录点论坛转 /login?return_to=/omew。未提交登录、投稿、评论或后台写入。
+- 搜索发现差异：歌曲 API 支持 q/limit/offset，UP 主字段为 owner.name；旧 Android 使用 owner_name 且只读首 1000 条。已通知两个实现 agent 修复。
+- Apple/WebKit 官方资料确认 iOS 默认启用文件上传，自定义 runOpenPanel 在 iOS 18.4 才加入；iOS16 依靠默认平台行为。
+- GitHub Actions 已启用且允许全部 action；checkout/setup-node/setup-java/upload-artifact 已查验当前官方版本并固定到 commit SHA。
