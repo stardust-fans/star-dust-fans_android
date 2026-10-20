@@ -537,8 +537,11 @@ public final class MainActivity extends Activity {
     private final class NavigationBridge {
         @JavascriptInterface
         public void routeChanged(String url) {
+            WebView target = webView;
+            if (!CallbackPolicy.shouldDeliver(target, webView, isFinishing(), isDestroyed())) return;
             runOnUiThread(() -> {
-                String current = webView.getUrl();
+                if (!CallbackPolicy.shouldDeliver(target, webView, isFinishing(), isDestroyed())) return;
+                String current = target.getUrl();
                 if (current != null && NavigationPolicy.isInternalMainFrame(current)
                         && NavigationPolicy.routeKey(current).equals(NavigationPolicy.routeKey(url))) {
                     syncTabFromUrl(current);
@@ -678,11 +681,15 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        ValueCallback<Uri[]> fileCallback = pendingFileCallback;
+        pendingFileCallback = null;
+        if (fileCallback != null) fileCallback.onReceiveValue(null);
         if (fullscreenView != null) hideFullscreenView();
         if (foregroundPoll != null) {
             handler.removeCallbacks(foregroundPoll);
         }
         if (webView != null) {
+            webView.removeJavascriptInterface("StarDustNavigation");
             webView.destroy();
             webView = null;
         }
