@@ -18,3 +18,7 @@
 - macOS CI 39368926817：contract 与 Android Gradle 构建通过；Apple 编译发现 Features.swift 两个 compactMap 泛型推断失败。作者显式标注 SearchHit? 闭包返回类型，并修复 refreshID 的 actor 隔离警告后重新验证。
 - Apple 官方 applicationDidEnterBackground 文档确认采用 scenes 的应用不收到该回调；修正为 SwiftUI scenePhase 在 background 提交任务，前台轮询只在 active 运行，并声明单 scene 以匹配共享 WebView 实例。
 - CI 39369281212：Apple iPhone/iPad 通用模拟器应用编译成功；XCTest 构建因 StarDustTests 缺 PRODUCT_NAME 产生空名 .xctest 输出冲突，补齐两个配置的 PRODUCT_NAME；Debug 禁止优化且关闭旧 headermap 搜索。
+- 最终集成 CI 39369510791（edd9b502282d0025d96e7ea1e4662a2a56b5d146）全部成功：固定网页来源契约 7 项、Java 导航策略、Android Gradle 调试 APK、Apple arm64/x86_64 模拟器构建、iPhone16 / iPad(A16) 各 11 项 XCTest 全通过。成功日志保存 workspace/work/mobile-ci-success.log。
+- Apple 模拟器工件 StarDust-simulator.zip 已下载到 outputs，SHA256 D6AD4E001B9A643AB296E44AC3D628668B93752B88F58DBA214B99D55B8D2065。
+- 最终交付前再次 fetch main：远端仍为 e2a031547e9544a04a8150256f18740b2974f39b，protected=false，rulesets 为空。
+- 仍需人工设备验收：真实账号登录/论坛单点登录、附件及头像上传、系统浏览器下载、邮件应用调用、媒体全屏和通知实际送达。未配置 Apple 开发团队或真机签名，工件为模拟器包。
