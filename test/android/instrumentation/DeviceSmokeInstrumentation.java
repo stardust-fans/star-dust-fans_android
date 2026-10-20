@@ -10,6 +10,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebChromeClient;
@@ -132,16 +133,46 @@ public final class DeviceSmokeInstrumentation extends Instrumentation {
             runOnMainSync(() -> check(tabs.getChildAt(tabIndex).performClick(), "native tab click failed"));
             waitForRouteAndTitle(routes[index], index >= 3);
         }
+        sendSubcaseStatus("tabs_passed");
 
         int pagesId = activity.getResources().getIdentifier("top_pages", "id", TARGET);
         check(pagesId != 0, "all-pages menu button missing");
         runOnMainSync(() -> check(activity.findViewById(pagesId).performClick(), "all-pages menu did not open"));
-        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
-        sendKeyDownUpSync(KeyEvent.KEYCODE_ENTER);
+        clickAccessibilityText("主页");
         waitForRouteAndTitle("/", false);
+        sendSubcaseStatus("pages_passed");
 
         openNativeActivity("top_settings", "com.stardust.fans.SettingsActivity");
+        sendSubcaseStatus("settings_passed");
         verifyNativeSearch();
+        sendSubcaseStatus("search_passed");
+    }
+
+    private void clickAccessibilityText(String exactText) throws Exception {
+        long deadline = SystemClock.uptimeMillis() + WAIT_MS;
+        while (SystemClock.uptimeMillis() < deadline) {
+            AccessibilityNodeInfo root = getUiAutomation().getRootInActiveWindow();
+            if (root != null) {
+                for (AccessibilityNodeInfo match : root.findAccessibilityNodeInfosByText(exactText)) {
+                    if (match.getText() == null || !exactText.contentEquals(match.getText())) continue;
+                    AccessibilityNodeInfo candidate = match;
+                    while (candidate != null) {
+                        if (candidate.isClickable()
+                                && candidate.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return;
+                        candidate = candidate.getParent();
+                    }
+                }
+            }
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("all-pages item not clickable: " + exactText);
+    }
+
+    private void sendSubcaseStatus(String name) {
+        Bundle status = new Bundle();
+        status.putString("current_test", currentTest);
+        status.putString("subcase", name);
+        sendStatus(0, status);
     }
 
     private void openNativeActivity(String idName, String className) throws Exception {
