@@ -18,3 +18,7 @@
 - Earlier progress describing a completed signing implementation refers to code/control-plane delivery only. It does not mean the IPA was signed, device-installed, or accepted.
 The public mobile repository must not publish the signed development IPA because its embedded provisioning profile can disclose registered device identifiers. Signed-package retrieval belongs to the central service's protected administrator interface; the repository workflow only publishes the unsigned archive and submits the request.
 - GitHub Actions run `39439884602`, job `118686612149`, exposed a stale local download path: 19/20 tests passed, and the archive-positive helper test failed with `ReferenceError: writeFile is not defined`. The repository-key download operation and its tests are removed because signed-package delivery is now restricted to the central administrator interface. This retires an unauthorized delivery path rather than weakening submit assertions; signing-center output verification remains independently enforced.
+
+## 当前状态（2026-10-21）
+
+先前等待 Xcode 许可/首次启动的状态已解除：Mac 已确认 Xcode 27.1、许可、首次启动和 SDK 均就绪，GitEdge 私有 runner 可用。中心凭据已采用同一证书及私钥的原生 PKCS#12 编码；native run `39546696981` 完成凭据导入，后续在旧 CN 后缀匹配条件处失败。identity SHA 绑定修复已审阅并通过 74 项测试；新 recipe `21-3` / `1bc3bd9` 正在部署，尚未确认 live。部署确认后需启动新 source run 并取得可验证 IPA；当前无 IPA、无 iPhone 安装或启动结果，任务仍进行中。设备 profile 包含两台已登记设备，其中有 iPhone 14 Pro；USB 当前为 0。Android ADB 实机验收已通过，不属于此处剩余阻塞。

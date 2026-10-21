@@ -5,8 +5,8 @@
 - [x] Remove repository-key status/download/report code and tests from the public mobile helper.
 - [x] Keep bounded submit handling, useful run summary, and focused root-level API contract/error tests.
 - [x] Document protected administrator retrieval, update audit records, run tests, and commit only owned changes.
-- [ ] Wait for the dedicated Mac to complete Xcode first-launch/license setup, then confirm the approved executor recipe is active.
-- [ ] Start a fresh source workflow run (attempt 1) and obtain a successful signed IPA; do not retry the expired recipe-3 request.
+- [x] Confirm the dedicated Mac has completed Xcode setup and the private runner is available.
+- [ ] Confirm the newly approved recipe is live, then start a fresh source workflow run and obtain a successful signed IPA.
 - [ ] Independently verify the signed IPA signature, profile, and authorized device scope.
 - [ ] Reconnect and unlock the registered iPhone, install the verified IPA, and confirm installation succeeds.
 - [ ] Launch the app and complete startup and crash/ANR acceptance checks on the iPhone.
