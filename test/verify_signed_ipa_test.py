@@ -103,7 +103,7 @@ class SignedIpaVerificationTests(unittest.TestCase):
             archive.writestr(f"{app}/embedded.mobileprovision", profile)
         return path.read_bytes()
 
-    def make_source(self):
+    def make_source(self, extra_dirs=()):
         inner = self.root / "unsigned.xcarchive.zip"
         app = "unsigned.xcarchive/Products/Applications/StarDust.app"
         archive_info = {"ApplicationProperties": {"ApplicationPath": "Applications/StarDust.app",
@@ -112,8 +112,12 @@ class SignedIpaVerificationTests(unittest.TestCase):
                     "CFBundleExecutable": "StarDust"}
         with zipfile.ZipFile(inner, "w", compression=zipfile.ZIP_STORED) as archive:
             archive.writestr("unsigned.xcarchive/Info.plist", plistlib.dumps(archive_info, fmt=plistlib.FMT_XML))
+            archive.writestr("unsigned.xcarchive/Products/", "")
+            archive.writestr("unsigned.xcarchive/Products/Applications/", "")
             archive.writestr(f"{app}/Info.plist", plistlib.dumps(app_info, fmt=plistlib.FMT_XML))
             archive.writestr(f"{app}/StarDust", macho())
+            for directory in extra_dirs:
+                archive.writestr(directory, "")
         source = {"platform": "ios", "architecture": "arm64", "bundle_id": self.bundle,
                   "version": self.version, "source_sha": self.source_sha}
         with zipfile.ZipFile(self.source, "w", compression=zipfile.ZIP_STORED) as archive:
@@ -155,12 +159,33 @@ class SignedIpaVerificationTests(unittest.TestCase):
         return VERIFY.verify(self.status, self.output, self.source, self.recipe_sha, self.team, self.bundle,
                              self.local_profile, self.phone_record, OPENSSL)
 
+    def refresh_source_bound_data(self, extra_dirs):
+        self.make_source(extra_dirs)
+        self.report = self.make_report()
+        self.make_output(self.ipa)
+        self.make_status(self.report)
+
     def test_valid_package_and_private_device_membership(self):
         result = self.run_check()
         self.assertEqual(result["bundle_id"], self.bundle)
         self.assertEqual(result["version"], self.version)
         self.assertEqual(result["authorized_device_count"], 1)
         self.assertNotIn(self.device_id, json.dumps(result))
+
+    def test_explicit_archive_parent_directories_are_allowed(self):
+        result = self.run_check()
+        self.assertEqual(result["bundle_id"], self.bundle)
+
+    def test_rejects_unexpected_empty_source_archive_directories(self):
+        cases = (
+            ("unsigned.xcarchive/Products/Empty/", "Products layout"),
+            ("unsigned.xcarchive/Products/Applications/Extra.app/", "only its declared app bundle"),
+        )
+        for directory, message in cases:
+            with self.subTest(directory=directory):
+                self.refresh_source_bound_data((directory,))
+                with self.assertRaisesRegex(VERIFY.VerificationError, message):
+                    self.run_check()
 
     def test_rejects_report_mismatch_and_extra_output_entry(self):
         changed = dict(self.report, bundle_id="other.bundle")

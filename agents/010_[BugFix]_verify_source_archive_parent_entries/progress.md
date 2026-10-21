@@ -1,0 +1,6 @@
+- Merged main `14020267e434b49503bfccba91f565fe55bcf31a` into the existing Android parity worktree and created `codex/ios-archive-parent-entries`.
+- Preserved pre-existing untracked `test/__pycache__/` and `test/android/instrumentation/device-smoke.apk`; neither is part of this change.
+- Added exact parent directory entries to the synthetic source archive and regression cases for extra `Products/Empty/` and `Applications/Extra.app/` directories.
+- Focused regression suite: `python -B test/verify_signed_ipa_test.py` passed all 10 tests, including legal explicit parent entries and both extra-directory rejection cases.
+- Python source compilation via `compile()` passed for the verifier and test module; `git diff --check` passed.
+- `validate_ipa` is unchanged because its discovery uses only regular entries returned by `validate_zip_infos`.

@@ -12,3 +12,4 @@
 | 007 | [BugFix] DeviceCrash | 修复 WebView 销毁回调并补充真机 instrumentation | 防止退出时空引用与选择器回调泄漏 | ✅ 已完成 |
 | 008 | [Feature] CentralIOSSigning | 中央签名提交流程与 iOS 真机验收 | 通过已授权签名服务产出可验证真机包 | 🔄 进行中 |
 | 009 | [Feature] SignedIPAValidation | 为已签名 iOS IPA 提供独立、只读的归档和签名报告验收工具 | 用户要求签名产物本地可复核 | ✅ 已完成 |
+| 010 | [BugFix] VerifySourceArchiveParentEntries | 接受合法 xcarchive 显式父目录项并拒绝额外目录 | 真实归档带有目录记录 | 🔄 进行中 |
