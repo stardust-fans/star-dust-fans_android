@@ -6,7 +6,7 @@
 <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.3.0</string>
-<key>CFBundleVersion</key><string>6</string>
+<key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>NSCameraUsageDescription</key><string>Take a photo to upload to Star Dust.</string>
 <key>NSPhotoLibraryUsageDescription</key><string>Choose photos and videos to upload to Star Dust.</string>
 <key>CFBundleDisplayName</key><string>Star Dust</string>
