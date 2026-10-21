@@ -4,3 +4,4 @@
 - Focused regression suite: `python -B test/verify_signed_ipa_test.py` passed all 10 tests, including legal explicit parent entries and both extra-directory rejection cases.
 - Python source compilation via `compile()` passed for the verifier and test module; `git diff --check` passed.
 - `validate_ipa` is unchanged because its discovery uses only regular entries returned by `validate_zip_infos`.
+- Build 7 source workflow `39550930654`（head `c03c55c43a87815f8dacb22118e87865bc3a250b`）和 CI run `39550930834` 均成功，包含 unsigned iOS device archive / Apple checks；独立验签对其实际签名输出通过。允许的显式 archive 父目录路径仍受 focused positive/negative suite 覆盖，任务关闭。

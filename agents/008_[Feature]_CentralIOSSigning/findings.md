@@ -27,4 +27,10 @@ The public mobile repository must not publish the signed development IPA because
 
 新 recipe `21-3` / `1bc3bd9` 已用于成功签署：source run `39548015544`（head `1402026`）生成 request `d8b09e55`，native run `39548167067` 成功。真实 IPA 版本 `1.3.0` build `6`，bundle `top.stardustinfinity.mobile`，大小 349147 bytes，SHA-256 `317501bb9a0a5695aac4baa99cd4aa19b9b611e6acbb0eb9c848d634dff65286`。profile 设备范围为两台登记设备，包含 iPhone 14 Pro。私有 Mac codesign 与 Windows 独立验包均通过，10 个 verifier fixture 与真实产物验证通过。
 
-已在 iPhone `iPhone15,2` / iOS 26.7.1 安装成功。三轮 20 秒启动检查均通过，5 秒与 20 秒处目标 bundle PID 保持不变且仍运行；目标 StarDust crash reports 为 0，进程退出码为 0。操作者确认栏目可以切换，但发现底栏展示不理想，返回/刷新和分享控件位于 tab 两侧并压缩栏目区域。该 UI 问题仍待修复和人工复验；自动启动/崩溃验收通过不代表视觉 UI 验收完成。
+已在 iPhone `iPhone15,2` / iOS 26.7.1 安装成功。三轮 20 秒启动检查均通过，5 秒与 20 秒处目标 bundle PID 保持不变且仍运行；目标 StarDust crash reports 为 0，启动检查脚本退出码为 0（非目标 app 退出码；采样时目标仍运行）。操作者确认栏目可以切换，但发现底栏展示不理想，返回/刷新和分享控件位于 tab 两侧并压缩栏目区域。该 UI 问题仍待修复和人工复验；自动启动/崩溃验收通过不代表视觉 UI 验收完成。
+
+## Build 7 验收（2026-10-21）
+
+Source run `39550930654`（main `c03c55c43a87815f8dacb22118e87865bc3a250b`）对应 CI `39550930834`，contract、Android、unsigned iOS device archive 与 Apple checks 全部成功。private native run `39551035570` 和 request `b430b987-da25-418a-b573-a550a0beac6d` 成功。独立 verifier 通过：输出 ZIP SHA-256 `cd98944989c24085912f8ca86e761e9a8791b5d5fabc2ecef479e4afef04a6a1` / 353310 bytes，IPA SHA-256 `818f4c8a821be7d98ef2ff150fac88e6a668321cabc239ff062b671a1fda8b8a` / 352183 bytes。通过 installation proxy 更新安装到已登记 iPhone，readback 确认 1.3.0/build 7；操作者确认 StarDust 当前在前台。三轮 20 秒 build 7 冷启动检查通过，每轮 5 秒及 20 秒相同 bundle PID 均存活，目标 StarDust 新 crash reports 为 0。build 7 页面截图和视觉验收结果见下方最终调查结论；build 6 的验收历史不替代 build 7 当前轮次。
+
+用户确认实际症状曾为运行一段时间后黑屏。最终对照显示 DVT 自动启动与手动重开/CoreDevice fresh launch 结果不同，详细过程见 012。手动重开后的常规 120 秒观测以及 CoreDevice fresh launch 均显示完整页面；没有证据支持 app-code 根因或永久修复，不加 speculative reload 逻辑。build 7 的产物和 UI 验收完成，当前工作流交付任务关闭。
