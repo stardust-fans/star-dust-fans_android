@@ -23,4 +23,10 @@
 
 Recipe `21-3` / `1bc3bd9` 下，native run `39548167067` 成功完成，绑定 request `d8b09e55` 和 source run `39548015544`（source head `1402026`）。IPA 为版本 `1.3.0`、build `6`、bundle `top.stardustinfinity.mobile`，大小 349147 bytes，SHA-256 `317501bb9a0a5695aac4baa99cd4aa19b9b611e6acbb0eb9c848d634dff65286`；development profile 覆盖两台登记设备，包含已登记 iPhone 14 Pro。私有 Mac codesign 验证与 Windows 独立归档/签名检查均通过，独立 verifier 的 10 个 fixture 检查及真实 IPA 检查通过。
 
-真实设备 `iPhone15,2` / iOS 26.7.1 在 paired mount 0 环境安装成功，此前未安装该应用。三轮各 20 秒的启动检查均通过：5 秒及 20 秒采样的目标 bundle PID 保持一致且运行状态为 true；目标 StarDust 崩溃报告数为 0，退出码为 0。人工确认页面可切换栏目，但 UI 展示不理想，底栏左右出现额外控件挤压栏目按钮；需修复并再次人工确认，不能据自动化启动/崩溃检查宣称 UI 验收完成。Android ADB 验收仍保持已通过。
+真实设备 `iPhone15,2` / iOS 26.7.1 在 paired mount 0 环境安装成功，此前未安装该应用。三轮各 20 秒的启动检查均通过：5 秒及 20 秒采样的目标 bundle PID 保持一致且运行状态为 true；目标 StarDust 崩溃报告数为 0；启动检查脚本退出码为 0（这不是目标应用退出码，采样时应用仍存活）。人工确认页面可切换栏目，但 UI 展示不理想，底栏左右出现额外控件挤压栏目按钮；需修复并再次人工确认，不能据自动化启动/崩溃检查宣称 UI 验收完成。Android ADB 验收仍保持已通过。
+
+## Build 7 更新（2026-10-21）
+
+移动 main `c03c55c43a87815f8dacb22118e87865bc3a250b` 的 source run `39550930654` 与 CI run `39550930834` 全部成功（contract、Android、unsigned iOS device archive、Apple checks）。private native run `39551035570` 成功，中心 request `b430b987-da25-418a-b573-a550a0beac6d` 成功。独立 verifier 对签名 ZIP 检查通过：ZIP SHA-256 `cd98944989c24085912f8ca86e761e9a8791b5d5fabc2ecef479e4afef04a6a1` / 353310 bytes；IPA SHA-256 `818f4c8a821be7d98ef2ff150fac88e6a668321cabc239ff062b671a1fda8b8a` / 352183 bytes。build 7 已经 installation proxy 成功更新到登记 iPhone，readback 确认版本 1.3.0/build 7。操作者确认应用目前在前台。后续 build 7 自动启动和视觉复核结果见下方更新；build 6 之前的成功结果仍记录如上，不替代 build 7 验收。
+
+启动更新：三轮 build 7 冷启动各运行 20 秒，5 秒及 20 秒时同一 bundle PID 均存活；目标 StarDust 新 crash report 为 0。自动启动/进程存活检查通过。DVT 启动的黑屏与手动重开和 CoreDevice fresh launch 的正常显示结果有别，过程和限制记录在 012；确认首页、顶栏和五个栏目都可见后完成视觉验收。现有证据不足以认定应用代码根因，不报告永久修复。

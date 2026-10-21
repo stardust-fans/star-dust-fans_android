@@ -8,3 +8,5 @@
 - 菜单动作使用 `Button` + `Label` 写法，避免依赖较新的 title/systemImage 按钮初始化器。
 - 更新 Xcode app target Debug/Release `CURRENT_PROJECT_VERSION` 为 7，并将 `Info.plist` 的 `CFBundleVersion` 绑定到该设置；营销版本仍为 1.3.0。
 - Windows 主机没有 Xcode 构建环境；Swift compile 与既有 XCTest 留给主控 macOS workflow 验证。尚未做设备 UI 复核。
+- Build 7 source run `39550930654` 与 CI run `39550930834` 的所有 checks 通过，私有签名与独立 IPA verification 成功。安装 proxy 更新安装后 readback 为 1.3.0/build 7；操作者确认应用正在前台。三轮 20 秒启动/存活检查通过，每轮 5 秒与 20 秒相同 PID 均存活、无新的 StarDust crash report。ScreenCaptureService 仍返回黑色内容；用户确认实际应用在运行一段时间后黑屏，视觉验收暂停并转入任务 012 取证。
+- 最终 UI 验收：手动重开后采集到顶栏、网页及五个等宽栏目，返回/刷新/分享不再挤占 tab 区域；120 秒同 PID 正常观测，60 秒和 120 秒截图完整。CoreDevice `kill_existing=true` fresh launch 也显示正常。视觉布局通过；黑页只在先前 DVT 自动启动模式观察到，未证明为应用代码缺陷。
