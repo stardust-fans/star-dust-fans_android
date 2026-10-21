@@ -308,7 +308,9 @@ def verify_source_artifact(path: Path, report: dict, bundle_id: str, temp_dir: P
                 and root_names.issubset({"Info.plist", "Products", "dSYMs", "BCSymbolMaps", "SwiftSupport"}),
                 "The source archive root layout is invalid.")
         product_children = {entry.filename.removeprefix("unsigned.xcarchive/Products/").split("/", 1)[0]
-                            for entry in inner.infolist() if entry.filename.startswith("unsigned.xcarchive/Products/")}
+                            for entry in inner.infolist()
+                            if entry.filename.startswith("unsigned.xcarchive/Products/")
+                            and entry.filename != "unsigned.xcarchive/Products/"}
         require(product_children == {"Applications"}, "The source archive Products layout is invalid.")
         apps = [name for name in {entry.filename for entry in inner_files}
                 if name.startswith("unsigned.xcarchive/Products/Applications/") and name.endswith(".app/Info.plist")]
@@ -317,7 +319,9 @@ def verify_source_artifact(path: Path, report: dict, bundle_id: str, temp_dir: P
         expected_root = f"unsigned.xcarchive/Products/{relative}"
         require(app_root == expected_root, "The source archive app path does not match its archive metadata.")
         app_children = {entry.filename.removeprefix("unsigned.xcarchive/Products/Applications/").split("/", 1)[0]
-                        for entry in inner.infolist() if entry.filename.startswith("unsigned.xcarchive/Products/Applications/")}
+                        for entry in inner.infolist()
+                        if entry.filename.startswith("unsigned.xcarchive/Products/Applications/")
+                        and entry.filename != "unsigned.xcarchive/Products/Applications/"}
         require(app_children == {app_root.rsplit("/", 1)[-1]}, "The source archive must contain only its declared app bundle.")
         app_info = application_info({entry.filename: entry for entry in inner_files}, inner, app_root)
         require(app_info.get("CFBundleIdentifier") == bundle_id and app_info.get("CFBundleShortVersionString") == report["version"],
