@@ -161,10 +161,10 @@ struct RootView: View {
                 Button { model.showSearch = true } label: { Label("搜索", systemImage: "magnifyingglass") }
                 Button { model.showSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("设置")
                 Menu {
-                    Button("返回", systemImage: "chevron.backward") { model.web.view.goBack() }
+                    Button { model.web.view.goBack() } label: { Label("返回", systemImage: "chevron.backward") }
                         .disabled(!model.canGoBack)
-                    Button("刷新", systemImage: "arrow.clockwise") { model.web.view.reload() }
-                    Button("分享当前页面", systemImage: "square.and.arrow.up") { model.shareURL = model.currentURL }
+                    Button { model.web.view.reload() } label: { Label("刷新", systemImage: "arrow.clockwise") }
+                    Button { model.shareURL = model.currentURL } label: { Label("分享当前页面", systemImage: "square.and.arrow.up") }
                         .disabled(model.currentURL == nil)
                 } label: {
                     Image(systemName: "ellipsis")
