@@ -12,3 +12,9 @@
 - 不再保留本次新增的 UIAutomator 全网页树导航脚本；使用实际 instrumentation 入口，避免同一个页面 dump 问题成为长期脆弱测试。
 - Android 真机验证已完成并通过，无需重跑。iOS 仍未签出 IPA：private GitEdge macOS broker native smoke 通过，但 Mac 的 Xcode 许可/首次启动尚未完成；只读 `sudo -n -l <xcodebuild> -runFirstLaunch` 权限检查被拒，未尝试 sudo 初始化。最新 recipe 4 为 `ios-runner-2026-10-20-4` / `a1883cd3042a05c7448a9c714d49070a423cc966`，中心部署 `0a786f49-bb6d-44e1-9ace-57825b9a7449`。此前请求依赖失效的 recipe 3；后续须使用 recipe 4 新开 attempt 1。诊断 probe 成功不代表签名工具链 ready；两次实际 native preflight 失败且未释放证书。iPhone 已登记但目前未连接 USB，profile 当前覆盖两台登记设备。
 - 早期关于“尚无 iOS 入口/等待用户确认”的记录已被后续授权与中央服务实现取代；当前仅 Xcode 首启许可和设备连接仍阻塞真机验收。
+
+## 状态更新（2026-10-21）
+
+上条有关 Xcode 首启和许可的描述已过时：Mac 已确认 Xcode 27.1、许可、首次启动及 SDK 均就绪，私有 GitEdge runner 已可用。开发 profile 现覆盖两台设备且包含 iPhone 14 Pro；当前 USB 未连接设备，连接应安排在 IPA 验签之后。
+
+中心凭据曾因现代 PKCS#12 格式导入失败；合成材料对照确认格式问题后，已更新为同一证书/私钥的原生 PKCS#12，native run `39546696981` 成功导入。该 run 随后在旧 CN 后缀与 Team ID 匹配假设处停止。identity SHA 绑定修复已通过审阅和 74 项测试；recipe `21-3` / `1bc3bd9` 正在部署，live 状态和签名输出尚未确认。尚无已签名 IPA，因此不报告 iPhone 安装或启动结果。Android ADB 验收保持已通过。

@@ -10,3 +10,7 @@ Removed the helper's repo-key status/download/report and IPA extraction path, le
 - Latest operational update: the GitEdge private macOS broker passed its native smoke check, but the Mac cannot run the iOS recipe until a user accepts the Xcode license and completes first launch. A read-only `sudo -n -l <xcodebuild> -runFirstLaunch` capability check was denied; no sudo initialization was attempted. Diagnostic run `39503920257` confirmed the probe path only, not Xcode readiness.
 - The existing request from source run `39503031284` uses expired recipe 3. Native attempts `39503178530` and `39503479163` stopped at preflight and did not release signing credentials. Once Xcode is initialized, verify recipe 4 is active and launch a new source run at attempt 1. No signed IPA has been produced.
 - The iPhone is currently disconnected from USB and must be reconnected/unlocked before installation. Android device validation is complete and remains passed.
+
+## 当前状态（2026-10-21）
+
+Mac Xcode 27.1、许可、首次启动及 SDK 已验证，私有 GitEdge runner 正常；无需再等待用户初始化。中心凭据更新为经合成对照确认可导入的原生 PKCS#12 格式。native run `39546696981` 成功完成导入，之后被旧 CN 后缀与 Team 匹配逻辑拦截；identity SHA 绑定修复已审阅且 74 项测试通过。recipe `21-3` / `1bc3bd9` 部署中，待确认 live 后启动新的 source run。无签名 IPA，故尚不能进行独立产物验签及 iPhone 安装/启动验收。USB 当前无设备，待 IPA 验签后再连接。Android ADB 验收保持通过。
