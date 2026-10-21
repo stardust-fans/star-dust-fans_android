@@ -22,3 +22,9 @@ The public mobile repository must not publish the signed development IPA because
 ## 当前状态（2026-10-21）
 
 先前等待 Xcode 许可/首次启动的状态已解除：Mac 已确认 Xcode 27.1、许可、首次启动和 SDK 均就绪，GitEdge 私有 runner 可用。中心凭据已采用同一证书及私钥的原生 PKCS#12 编码；native run `39546696981` 完成凭据导入，后续在旧 CN 后缀匹配条件处失败。identity SHA 绑定修复已审阅并通过 74 项测试；新 recipe `21-3` / `1bc3bd9` 正在部署，尚未确认 live。部署确认后需启动新 source run 并取得可验证 IPA；当前无 IPA、无 iPhone 安装或启动结果，任务仍进行中。设备 profile 包含两台已登记设备，其中有 iPhone 14 Pro；USB 当前为 0。Android ADB 实机验收已通过，不属于此处剩余阻塞。
+
+## 验收更新（2026-10-21）
+
+新 recipe `21-3` / `1bc3bd9` 已用于成功签署：source run `39548015544`（head `1402026`）生成 request `d8b09e55`，native run `39548167067` 成功。真实 IPA 版本 `1.3.0` build `6`，bundle `top.stardustinfinity.mobile`，大小 349147 bytes，SHA-256 `317501bb9a0a5695aac4baa99cd4aa19b9b611e6acbb0eb9c848d634dff65286`。profile 设备范围为两台登记设备，包含 iPhone 14 Pro。私有 Mac codesign 与 Windows 独立验包均通过，10 个 verifier fixture 与真实产物验证通过。
+
+已在 iPhone `iPhone15,2` / iOS 26.7.1 安装成功。三轮 20 秒启动检查均通过，5 秒与 20 秒处目标 bundle PID 保持不变且仍运行；目标 StarDust crash reports 为 0，进程退出码为 0。操作者确认栏目可以切换，但发现底栏展示不理想，返回/刷新和分享控件位于 tab 两侧并压缩栏目区域。该 UI 问题仍待修复和人工复验；自动启动/崩溃验收通过不代表视觉 UI 验收完成。

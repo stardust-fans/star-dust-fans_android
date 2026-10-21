@@ -160,21 +160,45 @@ struct RootView: View {
                 Spacer()
                 Button { model.showSearch = true } label: { Label("搜索", systemImage: "magnifyingglass") }
                 Button { model.showSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("设置")
+                Menu {
+                    Button { model.web.view.goBack() } label: { Label("返回", systemImage: "chevron.backward") }
+                        .disabled(!model.canGoBack)
+                    Button { model.web.view.reload() } label: { Label("刷新", systemImage: "arrow.clockwise") }
+                    Button { model.shareURL = model.currentURL } label: { Label("分享当前页面", systemImage: "square.and.arrow.up") }
+                        .disabled(model.currentURL == nil)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("更多")
             }.padding(.horizontal).padding(.vertical, 10)
             if model.loading { ProgressView().progressViewStyle(.linear) }
             if let failure = model.failure { Label(failure, systemImage: "wifi.exclamationmark").font(.callout).padding(8) }
             WebContent().environmentObject(model)
-            HStack {
-                Button { model.web.view.goBack() } label: { Image(systemName: "chevron.backward") }.disabled(!model.canGoBack).accessibilityLabel("返回")
-                Button { model.web.view.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("刷新")
-                Spacer()
+            HStack(spacing: 0) {
                 ForEach(model.contract?.tabs ?? []) { tab in
-                    Button { model.open(tab.path) } label: { VStack(spacing: 3) { Image(systemName: tab.symbol); Text(tab.title).font(.caption2).lineLimit(1) } }
-                        .foregroundStyle(model.selectedTab == tab.id ? Color.accentColor : Color.secondary).frame(maxWidth: .infinity)
+                    let selected = model.selectedTab == tab.id
+                    Button { model.open(tab.path) } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: tab.symbol)
+                            Text(tab.title).font(.caption2).lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(tab.title)
+                    .accessibilityValue(selected ? "已选中" : "")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
                 }
-                Spacer()
-                Button { model.shareURL = model.currentURL } label: { Image(systemName: "square.and.arrow.up") }.accessibilityLabel("分享当前页面")
-            }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 4).background(.bar)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+            .padding(.bottom, 4)
+            .background(.bar)
         }
         .task { model.openInitialPageIfNeeded() }
     }

@@ -13,3 +13,4 @@
 | 008 | [Feature] CentralIOSSigning | 中央签名提交流程与 iOS 真机验收 | 通过已授权签名服务产出可验证真机包 | 🔄 进行中 |
 | 009 | [Feature] SignedIPAValidation | 为已签名 iOS IPA 提供独立、只读的归档和签名报告验收工具 | 用户要求签名产物本地可复核 | ✅ 已完成 |
 | 010 | [BugFix] VerifySourceArchiveParentEntries | 接受合法 xcarchive 显式父目录项并拒绝额外目录 | 真实归档带有目录记录 | 🔄 进行中 |
+| 011 | [BugFix] NavigationBar | 清理 Apple 底栏栏目布局并将返回/刷新/分享移入顶部更多菜单 | 真机确认原有控件挤压栏目按钮 | 🔄 进行中 |
