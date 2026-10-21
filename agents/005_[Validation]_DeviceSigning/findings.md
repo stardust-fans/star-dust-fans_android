@@ -17,4 +17,10 @@
 
 上条有关 Xcode 首启和许可的描述已过时：Mac 已确认 Xcode 27.1、许可、首次启动及 SDK 均就绪，私有 GitEdge runner 已可用。开发 profile 现覆盖两台设备且包含 iPhone 14 Pro；当前 USB 未连接设备，连接应安排在 IPA 验签之后。
 
-中心凭据曾因现代 PKCS#12 格式导入失败；合成材料对照确认格式问题后，已更新为同一证书/私钥的原生 PKCS#12，native run `39546696981` 成功导入。该 run 随后在旧 CN 后缀与 Team ID 匹配假设处停止。identity SHA 绑定修复已通过审阅和 74 项测试；recipe `21-3` / `1bc3bd9` 正在部署，live 状态和签名输出尚未确认。尚无已签名 IPA，因此不报告 iPhone 安装或启动结果。Android ADB 验收保持已通过。
+中心凭据曾因现代 PKCS#12 格式导入失败；合成材料对照确认格式问题后，已更新为同一证书/私钥的原生 PKCS#12，native run `39546696981` 成功导入。该 run 随后在旧 CN 后缀与 Team ID 匹配假设处停止。identity SHA 绑定修复已通过审阅和 74 项测试。后续签名与设备验收结果见下方更新。
+
+## 验收更新（2026-10-21）
+
+Recipe `21-3` / `1bc3bd9` 下，native run `39548167067` 成功完成，绑定 request `d8b09e55` 和 source run `39548015544`（source head `1402026`）。IPA 为版本 `1.3.0`、build `6`、bundle `top.stardustinfinity.mobile`，大小 349147 bytes，SHA-256 `317501bb9a0a5695aac4baa99cd4aa19b9b611e6acbb0eb9c848d634dff65286`；development profile 覆盖两台登记设备，包含已登记 iPhone 14 Pro。私有 Mac codesign 验证与 Windows 独立归档/签名检查均通过，独立 verifier 的 10 个 fixture 检查及真实 IPA 检查通过。
+
+真实设备 `iPhone15,2` / iOS 26.7.1 在 paired mount 0 环境安装成功，此前未安装该应用。三轮各 20 秒的启动检查均通过：5 秒及 20 秒采样的目标 bundle PID 保持一致且运行状态为 true；目标 StarDust 崩溃报告数为 0，退出码为 0。人工确认页面可切换栏目，但 UI 展示不理想，底栏左右出现额外控件挤压栏目按钮；需修复并再次人工确认，不能据自动化启动/崩溃检查宣称 UI 验收完成。Android ADB 验收仍保持已通过。

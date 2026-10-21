@@ -14,3 +14,5 @@ Removed the helper's repo-key status/download/report and IPA extraction path, le
 ## 当前状态（2026-10-21）
 
 Mac Xcode 27.1、许可、首次启动及 SDK 已验证，私有 GitEdge runner 正常；无需再等待用户初始化。中心凭据更新为经合成对照确认可导入的原生 PKCS#12 格式。native run `39546696981` 成功完成导入，之后被旧 CN 后缀与 Team 匹配逻辑拦截；identity SHA 绑定修复已审阅且 74 项测试通过。recipe `21-3` / `1bc3bd9` 部署中，待确认 live 后启动新的 source run。无签名 IPA，故尚不能进行独立产物验签及 iPhone 安装/启动验收。USB 当前无设备，待 IPA 验签后再连接。Android ADB 验收保持通过。
+
+2026-10-21：recipe `21-3` / `1bc3bd9` 签署成功；source run `39548015544`（head `1402026`）、request `d8b09e55`、native run `39548167067`。真实 IPA SHA-256 `317501bb9a0a5695aac4baa99cd4aa19b9b611e6acbb0eb9c848d634dff65286`，349147 bytes，版本 1.3.0 build 6。Mac codesign、Windows 独立验包、10 项 fixture 和真实产物检查通过。安装到 iPhone `iPhone15,2` / iOS 26.7.1 成功；三轮 20 秒启动存活测试通过，崩溃报告 0、退出码 0。操作者已报告底栏布局问题，UI 修复及人工复验未完成。
