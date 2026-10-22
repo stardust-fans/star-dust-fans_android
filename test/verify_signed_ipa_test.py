@@ -172,6 +172,18 @@ class SignedIpaVerificationTests(unittest.TestCase):
         self.assertEqual(result["authorized_device_count"], 1)
         self.assertNotIn(self.device_id, json.dumps(result))
 
+    def test_verified_ipa_is_copied_only_after_all_checks_pass(self):
+        destination = self.root / "verified.ipa"
+        VERIFY.verify(self.status, self.output, self.source, self.recipe_sha, self.team, self.bundle,
+                      self.local_profile, self.phone_record, OPENSSL, destination)
+        self.assertEqual(destination.read_bytes(), self.ipa)
+        destination.unlink()
+        self.make_status(dict(self.report, bundle_id="other.bundle"))
+        with self.assertRaises(VERIFY.VerificationError):
+            VERIFY.verify(self.status, self.output, self.source, self.recipe_sha, self.team, self.bundle,
+                          self.local_profile, self.phone_record, OPENSSL, destination)
+        self.assertFalse(destination.exists())
+
     def test_explicit_archive_parent_directories_are_allowed(self):
         result = self.run_check()
         self.assertEqual(result["bundle_id"], self.bundle)

@@ -486,7 +486,8 @@ def validate_ipa(ipa_path: Path, report: dict, team_id: str, bundle_id: str, tem
 
 
 def verify(status_path: Path, output_path: Path, source_path: Path, recipe_sha: str, team_id: str, bundle_id: str,
-           local_profile_path: Path | None = None, phone_record_path: Path | None = None, openssl: str = "openssl") -> dict:
+           local_profile_path: Path | None = None, phone_record_path: Path | None = None, openssl: str = "openssl",
+           ipa_output_path: Path | None = None) -> dict:
     require(HEX_COMMIT.fullmatch(recipe_sha) is not None, "The expected recipe SHA must be a 40-character lowercase commit hash.")
     require(TEAM_ID.fullmatch(team_id) is not None, "The expected team ID must contain ten uppercase letters or digits.")
     require(isinstance(bundle_id, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]{0,254}", bundle_id) is not None,
@@ -514,6 +515,9 @@ def verify(status_path: Path, output_path: Path, source_path: Path, recipe_sha: 
         ipa_path = extract_output_ipa(output_path, status, report, temp_dir)
         version = validate_ipa(ipa_path, report, team_id, bundle_id, temp_dir, openssl,
                                local_profile_path, phone_record_path)
+        if ipa_output_path is not None:
+            require(not ipa_output_path.exists(), "The verified IPA output path already exists.")
+            shutil.copyfile(ipa_path, ipa_output_path)
         return {"output_sha256": sha256_file(output_path), "output_size": output_path.stat().st_size,
                 "ipa_sha256": report["files"][0]["sha256"], "ipa_size": report["files"][0]["size"],
                 "bundle_id": bundle_id, "version": version, "profile_uuid": report["profile_uuid"],
@@ -531,11 +535,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bundle-id", required=True)
     parser.add_argument("--profile", type=Path, help="Optional local provisioning profile for cross-checking")
     parser.add_argument("--phone-record", type=Path, help="Optional connected-iphone.json for private membership check")
+    parser.add_argument("--ipa-output", type=Path, help="Copy the IPA to this path after all verification succeeds")
     parser.add_argument("--openssl", default="openssl", help="OpenSSL executable")
     args = parser.parse_args(argv)
     try:
         result = verify(args.status, args.signed_zip, args.source_artifact, args.recipe_sha, args.team_id,
-                        args.bundle_id, args.profile, args.phone_record, args.openssl)
+                        args.bundle_id, args.profile, args.phone_record, args.openssl, args.ipa_output)
     except VerificationError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1
