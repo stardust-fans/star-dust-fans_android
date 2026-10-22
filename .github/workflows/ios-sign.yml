@@ -4,7 +4,9 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
+  id-token: write
 
 jobs:
   sign-ipa:
@@ -13,7 +15,6 @@ jobs:
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
-      OPERATION: build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
@@ -65,9 +66,11 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
-      - name: Submit source archive to signing service
+      - name: Submit source archive to GitEdge
         env:
           ARTIFACT_ID: ${{ steps.unsigned.outputs.artifact-id }}
           APP_VERSION: ${{ steps.source.outputs.version }}
-          SIGNING_API_KEY: ${{ secrets.SIGNING_API_KEY }}
+          GITEDGE_SIGNING_TOKEN: ${{ secrets.GITEDGE_SIGNING_TOKEN }}
+          GITEDGE_SIGNING_PROFILE: ${{ vars.GITEDGE_SIGNING_PROFILE }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/ios-sign-api.mjs
