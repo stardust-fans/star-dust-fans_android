@@ -25,20 +25,20 @@ jobs:
             @{ Root = 'D:\GitEdge\runner-broker'; BrokerTask = 'GitEdgeRunnerBroker'; Suffix = '1' },
             @{ Root = 'D:\GitEdge\runner-broker-2'; BrokerTask = 'GitEdgeRunnerBroker-2'; Suffix = '2' }
           )
-          
+
           function Get-PrincipalSid {
             param([string]$UserId)
             if ($UserId -match '^S-\d-') { return [System.Security.Principal.SecurityIdentifier]::new($UserId) }
             return ([System.Security.Principal.NTAccount]::new($UserId)).Translate([System.Security.Principal.SecurityIdentifier])
           }
-          
+
           function Get-ArgumentTokens {
             param([string]$Arguments)
             return @([regex]::Matches($Arguments, '"([^"]*)"|(\S+)') | ForEach-Object {
               if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value }
             })
           }
-          
+
           $prepared = @()
           foreach ($target in $targets) {
             $root = [IO.Path]::GetFullPath($target.Root)
@@ -46,14 +46,14 @@ jobs:
             if (-not [string]::Equals($root, $resolvedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Broker root did not resolve to the fixed path.' }
             $gitEntry = Get-Item -LiteralPath (Join-Path $root '.git') -Force -ErrorAction Stop
             if (-not $gitEntry.PSIsContainer -or ($gitEntry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Broker Git directory is not a normal directory.' }
-          
+
             $ops = Join-Path $root 'work\ops'
             $opsEntry = Get-Item -LiteralPath $ops -Force -ErrorAction Stop
             if (-not $opsEntry.PSIsContainer -or ($opsEntry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Operations directory is not a normal directory.' }
             $helperPath = Join-Path $ops 'update-idle-broker.mjs'
             $existingHelper = Get-Item -LiteralPath $helperPath -Force -ErrorAction Stop
             if ($existingHelper.PSIsContainer -or ($existingHelper.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Updater helper is not a normal file.' }
-          
+
             $broker = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
             if ($broker.State.ToString() -ne 'Running') { throw 'Persistent broker task is not running.' }
             if ($broker.Principal.LogonType -notin @('Interactive', 'InteractiveToken') -or $broker.Principal.RunLevel -ne 'Limited') { throw 'Broker task principal is not the approved interactive limited principal.' }
@@ -78,7 +78,7 @@ jobs:
                 throw 'Updater task arguments do not match the expected helper invocation.'
               }
             }
-          
+
             $wrapperPath = Join-Path $ops ('run-broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.ps1')
             $stdoutPath = Join-Path $ops ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.out.log')
             $stderrPath = Join-Path $ops ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.err.log')
@@ -97,7 +97,7 @@ jobs:
               PreviousRunTime = $oldHelperInfo.LastRunTime
             }
           }
-          
+
           $wrapperTemplate = @'
           $ErrorActionPreference = 'Stop'
           $nodePath = __NODE__
@@ -116,22 +116,22 @@ jobs:
           }
           '@
           $quote = { param([string]$value) "'" + $value.Replace("'", "''") + "'" }
-          
+
           foreach ($entry in $prepared) {
             [IO.File]::WriteAllText($entry.HelperPath, $helperSource, [Text.UTF8Encoding]::new($false))
             $wrapper = $wrapperTemplate.Replace('__NODE__', (& $quote $nodePath)).Replace('__HELPER__', (& $quote $entry.HelperPath)).Replace('__ROOT__', (& $quote $entry.Root)).Replace('__REVISION__', (& $quote $revision)).Replace('__BROKER_TASK__', (& $quote $entry.BrokerTask)).Replace('__STDOUT__', (& $quote $entry.StdoutPath)).Replace('__STDERR__', (& $quote $entry.StderrPath))
             [IO.File]::WriteAllText($entry.WrapperPath, $wrapper, [Text.UTF8Encoding]::new($false))
           }
-          
+
           $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 35) -MultipleInstances IgnoreNew
           foreach ($entry in $prepared) {
             $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}"' -f $entry.WrapperPath
             $action = New-ScheduledTaskAction -Execute $powershellPath -Argument $arguments -WorkingDirectory $entry.Root
             Set-ScheduledTask -TaskName $entry.HelperTaskName -Action $action -Principal $entry.BrokerPrincipal -Settings $settings | Out-Null
           }
-          
+
           foreach ($entry in $prepared) { Start-ScheduledTask -TaskName $entry.HelperTaskName }
-          
+
           $started = @()
           foreach ($entry in $prepared) {
             $deadline = (Get-Date).AddSeconds(10)
@@ -146,4 +146,3 @@ jobs:
             $started += [ordered]@{ root = $entry.Root; task = $entry.HelperTaskName; state = $task.State.ToString(); lastTaskResult = $info.LastTaskResult; started = $true }
           }
           $started | ConvertTo-Json -Compress -Depth 4
-          
