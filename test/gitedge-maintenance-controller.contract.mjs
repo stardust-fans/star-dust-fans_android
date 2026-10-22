@@ -28,14 +28,21 @@ const filesMatch = source.match(/const files = (\[[^\n]+\]);/);
 assert.ok(filesMatch, "fixed payload list must be inline JSON");
 const files = JSON.parse(filesMatch[1]);
 assert.deepEqual(files.map((file) => file.path), [
-  ".github/workflows/macos-broker-verify-cleanup.yml",
   ".github/workflows/windows-broker-diagnostics.yml",
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "b50e4e07b21460677d1bd3236b69aa7e41363a1cd94fa9052ed4f5a896d251b8",
-  "d5a66db18d9f23fb4b2985cf72d5ec53a0f62a4fb5488220f2ff44e97e76c500",
+  "dad3f3d46f460ac1c2d9f45f17d8cc8d874751e3549fd9b519eede47c137bd5d",
 ]);
+const windowsDiagnostic = payloadBytes[0].toString("utf8");
+assert.match(windowsDiagnostic, /revParseExitCode/);
+assert.match(windowsDiagnostic, /statusCategory/);
+assert.match(windowsDiagnostic, /gitDirectoryType/);
+assert.match(windowsDiagnostic, /currentUserMatchesBrokerPrincipal/);
+assert.match(windowsDiagnostic, /dubious ownership/);
+assert.match(windowsDiagnostic, /<redacted>/);
+assert.match(windowsDiagnostic, /report\.currentUserMatchesBrokerPrincipal\s*=\s*\[string\]::Equals/);
+assert.doesNotMatch(windowsDiagnostic, /currentUsername\s*=/);
 
 const initialOid = "a".repeat(40);
 const commitOid = "b".repeat(40);
@@ -88,8 +95,8 @@ const context = {
 };
 await vm.runInNewContext(source, context);
 assert.equal(context.process.exitCode, 0);
-assert.equal(calls.length, 4);
-assert.equal(output.filter((line) => line.includes("run-")).length, 3);
+assert.equal(calls.length, 3);
+assert.equal(output.filter((line) => line.includes("run-")).length, 2);
 assert.equal(output.some((line) => line.includes(token)), false);
 
 const failureOutput = [];
