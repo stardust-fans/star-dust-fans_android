@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "60d8223a01bed24d9fa50c91e8e05799dd2bf0fa18c0bea21a0ed62c40521363",
+  "d17de46990ed908cd9cbfe4ddac477d7160e9b81e7fedc25a3936b5928282052",
 ]);
 const windowsReadback = payloadBytes[0].toString("utf8");
 assert.match(windowsReadback, /safe\.directory=\$\(\$target\.Root\)/);
