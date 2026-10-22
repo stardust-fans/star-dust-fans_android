@@ -28,29 +28,20 @@ const filesMatch = source.match(/const files = (\[[^\n]+\]);/);
 assert.ok(filesMatch, "fixed payload list must be inline JSON");
 const files = JSON.parse(filesMatch[1]);
 assert.deepEqual(files.map((file) => file.path), [
-  ".github/workflows/windows-broker-stage.yml",
-  ".github/workflows/runner-jit-diagnostic.yml",
+  ".github/workflows/windows-broker-verify-cleanup.yml",
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "da8cfe6f41942b21af5d25112f072d99c181294782ba6d0865dcde048ff55251",
-  "2523091ab3c0632a74e1725e4b4076d41f8aa92769c5fe8c4363a8cec0dbba33",
+  "60d8223a01bed24d9fa50c91e8e05799dd2bf0fa18c0bea21a0ed62c40521363",
 ]);
-const windowsStage = payloadBytes[0].toString("utf8");
-assert.match(windowsStage, /GitEdgeBrokerUpdate-' \+ \$shortRevision \+ '-/);
-assert.match(windowsStage, /LastTaskResult -ne 1/);
-assert.match(windowsStage, /Get-PrincipalSid/);
-assert.match(windowsStage, /Updater task arguments do not match/);
-assert.match(windowsStage, /run-broker-update-.*-logged-/);
-assert.doesNotMatch(windowsStage, /Stop-ScheduledTask/);
-const linuxDiagnostic = payloadBytes[1].toString("utf8");
-assert.match(linuxDiagnostic, /runner_id='49a6d7d2-0008-45c7-8971-951c53c8070a'/);
-assert.match(linuxDiagnostic, /internal_job_id='78fd32d3-b094-4b64-a9d1-8ed001d49194'/);
-assert.match(linuxDiagnostic, /emit_flag jit_configuration/);
-assert.match(linuxDiagnostic, /emit_flag runner_authentication/);
-assert.match(linuxDiagnostic, /emit_flag network_failure/);
-assert.match(linuxDiagnostic, /emit_flag job_assignment/);
-assert.doesNotMatch(linuxDiagnostic, /secrets\.|GITHUB_TOKEN|GITEDGE_SIGNING_TOKEN/);
+const windowsReadback = payloadBytes[0].toString("utf8");
+assert.match(windowsReadback, /safe\.directory=\$\(\$target\.Root\)/);
+assert.match(windowsReadback, /messageCategory/);
+assert.match(windowsReadback, /StderrCategory/);
+assert.match(windowsReadback, /Unregister-ScheduledTask -TaskName \$entry\.HelperTask/);
+assert.doesNotMatch(windowsReadback, /Stop-ScheduledTask/);
+assert.doesNotMatch(windowsReadback, /Write-Output.*\$stderr/);
+assert.doesNotMatch(windowsReadback, /secrets\.|GITHUB_TOKEN|GITEDGE_SIGNING_TOKEN/);
 const initialOid = "a".repeat(40);
 const commitOid = "b".repeat(40);
 const calls = [];
@@ -102,8 +93,8 @@ const context = {
 };
 await vm.runInNewContext(source, context);
 assert.equal(context.process.exitCode, 0);
-assert.equal(calls.length, 4);
-assert.equal(output.filter((line) => line.startsWith("Queued ")).length, 2);
+assert.equal(calls.length, 3);
+assert.equal(output.filter((line) => line.startsWith("Queued ")).length, 1);
 assert.equal(output.some((line) => line.includes(token)), false);
 
 const failureOutput = [];

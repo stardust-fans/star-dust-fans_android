@@ -1,0 +1,5 @@
+# Findings
+- The prior readback checked receipts, HEAD, and running brokers, and only unregistered the two exact temporary updater tasks after both roots passed. Missing receipts failed before cleanup. It did not stop or restart a broker.
+- Its plain `git rev-parse` could fail under the verified runner identity because default Git trust reported dubious ownership. The updated command scopes `safe.directory` to the fixed root.
+- The updated readback emits receipt status, expected/current revision data, timestamps, and fixed message categories. It reports only wrapper exit status, log presence, and fixed stderr category; no raw receipt message, URLs, or log lines are emitted.
+- Cleanup revalidates both hosts and removes only the two fixed updater tasks after successful receipts, HEAD checks, broker-running checks, matching principal SID, exact wrapper action, successful wrapper exit, and normal log-file checks. It leaves wrapper scripts and logs for audit.

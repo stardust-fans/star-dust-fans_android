@@ -1,0 +1,95 @@
+name: Verify and clean up Windows broker updates
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-brokers:
+    runs-on: [self-hosted, Windows, need-tool-node, need-time-5m]
+    timeout-minutes: 5
+    steps:
+      - name: Verify both receipts and remove completed one-shot tasks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $revision = 'f929b6164fe55c0c510485f9869816f482ee8560'
+          $shortRevision = 'f929b6164fe5'
+          $targets = @(
+            @{ Root = 'D:\GitEdge\runner-broker'; BrokerTask = 'GitEdgeRunnerBroker'; Suffix = '1' },
+            @{ Root = 'D:\GitEdge\runner-broker-2'; BrokerTask = 'GitEdgeRunnerBroker-2'; Suffix = '2' }
+          )
+          $verified = @()
+          function Get-PrincipalSid {
+            param([string]$UserId)
+            if ($UserId -match '^S-\d-') { return [System.Security.Principal.SecurityIdentifier]::new($UserId) }
+            return ([System.Security.Principal.NTAccount]::new($UserId)).Translate([System.Security.Principal.SecurityIdentifier])
+          }
+          function Get-ArgumentTokens {
+            param([string]$Arguments)
+            return @([regex]::Matches($Arguments, '"([^"]*)"|(\S+)') | ForEach-Object {
+              if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value }
+            })
+          }
+          function Get-MessageCategory {
+            param([string]$Message)
+            if ($Message -match '(?i)dubious ownership|safe\.directory') { return 'git_trust' }
+            if ($Message -match '(?i)tracked changes|checkout.*dirty') { return 'checkout_dirty' }
+            if ($Message -match '(?i)become idle|active\.lock|did not become idle') { return 'broker_busy' }
+            if ($Message -match '(?i)fast.forward|merge.*failed') { return 'update_failed' }
+            if ($Message -match '(?i)service did not start|service.*not running') { return 'service_start_failed' }
+            return 'other'
+          }
+          foreach ($target in $targets) {
+            $receiptPath = Join-Path $target.Root 'work\broker-update-receipt.json'
+            if (-not (Test-Path -LiteralPath $receiptPath -PathType Leaf)) { throw 'Broker update receipt is missing.' }
+            $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json -ErrorAction Stop
+            $receiptSummary = [ordered]@{ status = $receipt.status; revision = $receipt.revision; previous = $receipt.previous; completedAt = $receipt.completedAt; messageCategory = if ($receipt.message -is [string]) { Get-MessageCategory $receipt.message } else { 'none' } }
+            Write-Output ($receiptSummary | ConvertTo-Json -Compress -Depth 4)
+            if ($receipt.status -ne 'success' -or $receipt.revision -ne $revision -or $receipt.previous -notmatch '^[a-f0-9]{40}$') { throw 'Broker update receipt does not match the expected successful update.' }
+            $head = (& git -c "safe.directory=$($target.Root)" -C $target.Root rev-parse HEAD 2>$null | Out-String).Trim()
+            Write-Output "Git HEAD ($($target.Root)): $head"
+            if ($LASTEXITCODE -ne 0 -or $head -ne $revision) { throw 'Broker checkout HEAD does not match the successful receipt.' }
+            $broker = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
+            if ($broker.State.ToString() -ne 'Running') { throw 'Persistent broker task is not running.' }
+            $helperTaskName = 'GitEdgeBrokerUpdate-' + $shortRevision + '-' + $target.Suffix
+            $helperTask = Get-ScheduledTask -TaskName $helperTaskName -ErrorAction Stop
+            if ($helperTask.State.ToString() -eq 'Running') { throw 'A temporary updater is still running; retry verification after it exits.' }
+            if ($helperTask.State.ToString() -ne 'Ready') { throw 'The owned updater task is not ready for cleanup.' }
+            if ((Get-PrincipalSid ([string]$broker.Principal.UserId)).Value -ne (Get-PrincipalSid ([string]$helperTask.Principal.UserId)).Value) { throw 'The updater task principal does not match the broker.' }
+            if ($helperTask.Actions.Count -ne 1) { throw 'The updater task action is not the owned wrapper.' }
+            $wrapperPath = Join-Path (Join-Path $target.Root 'work\ops') ('run-broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.ps1')
+            $pwshPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
+            $actionArguments = Get-ArgumentTokens ([string]$helperTask.Actions[0].Arguments)
+            if (-not [string]::Equals([IO.Path]::GetFullPath([string]$helperTask.Actions[0].Execute), [IO.Path]::GetFullPath($pwshPath), [StringComparison]::OrdinalIgnoreCase) -or $actionArguments.Count -ne 7 -or $actionArguments[5] -ne '-File' -or -not [string]::Equals([IO.Path]::GetFullPath($actionArguments[6]), [IO.Path]::GetFullPath($wrapperPath), [StringComparison]::OrdinalIgnoreCase)) { throw 'The updater task action does not match the owned wrapper.' }
+            $taskInfo = Get-ScheduledTaskInfo -TaskName $helperTaskName -ErrorAction Stop
+            if ($taskInfo.LastTaskResult -ne 0) { throw 'The updater wrapper did not exit successfully.' }
+            $ops = Join-Path $target.Root 'work\ops'
+            $stdoutPath = Join-Path $ops ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.out.log')
+            $stderrPath = Join-Path $ops ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.err.log')
+            foreach ($logPath in @($stdoutPath, $stderrPath)) {
+              $logItem = Get-Item -LiteralPath $logPath -Force -ErrorAction Stop
+              if ($logItem.PSIsContainer -or ($logItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'An updater log is not a normal file.' }
+            }
+            $stderr = Get-Content -LiteralPath $stderrPath -Raw
+            $stderrCategory = if ([string]::IsNullOrWhiteSpace($stderr)) { 'none' } else { Get-MessageCategory $stderr }
+            $verified += [pscustomobject]@{ Root = $target.Root; BrokerTask = $target.BrokerTask; HelperTask = $helperTaskName; Suffix = $target.Suffix; ReceiptStatus = $receipt.status; Previous = $receipt.previous; ActualHead = $head; BrokerRunning = $true; WrapperExitCode = $taskInfo.LastTaskResult; StdoutLogPresent = $true; StderrLogPresent = $true; StderrCategory = $stderrCategory }
+          }
+          Write-Output ($verified | Select-Object Root, ReceiptStatus, Previous, ActualHead, BrokerRunning, HelperTask, WrapperExitCode, StdoutLogPresent, StderrLogPresent, StderrCategory | ConvertTo-Json -Compress -Depth 4)
+          foreach ($entry in $verified) {
+            $helperTask = Get-ScheduledTask -TaskName $entry.HelperTask -ErrorAction Stop
+            if ($helperTask.State.ToString() -eq 'Running') { throw 'A temporary updater became active before cleanup.' }
+            if ($helperTask.State.ToString() -ne 'Ready') { throw 'The owned updater task is not ready for cleanup.' }
+            $broker = Get-ScheduledTask -TaskName $entry.BrokerTask -ErrorAction Stop
+            if ($broker.State.ToString() -ne 'Running' -or (Get-PrincipalSid ([string]$broker.Principal.UserId)).Value -ne (Get-PrincipalSid ([string]$helperTask.Principal.UserId)).Value) { throw 'The updater task principal or broker state changed before cleanup.' }
+            if ($helperTask.Actions.Count -ne 1) { throw 'The updater task action changed before cleanup.' }
+            $wrapperPath = Join-Path (Join-Path $entry.Root 'work\ops') ('run-broker-update-' + $shortRevision + '-logged-' + $entry.Suffix + '.ps1')
+            $pwshPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
+            $actionArguments = Get-ArgumentTokens ([string]$helperTask.Actions[0].Arguments)
+            if (-not [string]::Equals([IO.Path]::GetFullPath([string]$helperTask.Actions[0].Execute), [IO.Path]::GetFullPath($pwshPath), [StringComparison]::OrdinalIgnoreCase) -or $actionArguments.Count -ne 7 -or $actionArguments[5] -ne '-File' -or -not [string]::Equals([IO.Path]::GetFullPath($actionArguments[6]), [IO.Path]::GetFullPath($wrapperPath), [StringComparison]::OrdinalIgnoreCase)) { throw 'The updater task action changed before cleanup.' }
+            Unregister-ScheduledTask -TaskName $entry.HelperTask -Confirm:$false
+          }
+          Write-Output "Windows broker updates verified at revision $revision; both broker tasks are running; temporary updater tasks removed."
+          
