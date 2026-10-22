@@ -1,0 +1,124 @@
+name: Diagnose GitEdge broker update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-windows-brokers:
+    runs-on: [self-hosted, Windows, need-tool-node, need-time-5m]
+    timeout-minutes: 5
+    steps:
+      - name: Read both broker roots and updater task state
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $revision = 'f929b6164fe55c0c510485f9869816f482ee8560'
+          $runtimePaths = [ordered]@{}
+          foreach ($tool in @('git.exe', 'node.exe')) {
+            try { $runtimePaths[$tool] = (Get-Command $tool -ErrorAction Stop).Source }
+            catch { $runtimePaths[$tool] = $null }
+          }
+          $targets = @(
+            @{ Root = 'D:\GitEdge\runner-broker'; BrokerTask = 'GitEdgeRunnerBroker'; Suffix = '1' },
+            @{ Root = 'D:\GitEdge\runner-broker-2'; BrokerTask = 'GitEdgeRunnerBroker-2'; Suffix = '2' }
+          )
+          $reports = @()
+          foreach ($target in $targets) {
+            $helperName = 'GitEdgeBrokerUpdate-' + $revision.Substring(0, 12) + '-' + $target.Suffix
+            $report = [ordered]@{ root = $target.Root; expectedRevision = $revision; runtimePaths = $runtimePaths; gitDirectoryType = $null; currentUserMatchesBrokerPrincipal = $null; gitCommands = [ordered]@{}; actualHEAD = $null; trackedChangedFiles = @(); receipt = $null; updaterTask = $null; brokerTask = $null; logs = $null; errors = @() }
+            $gitCategory = {
+              param([string]$Text)
+              if ($Text -match '(?i)(detected dubious ownership|safe\.directory)') { return 'dubious ownership' }
+              if ($Text -match '(?i)not a git repository') { return 'not a git repository' }
+              if ($Text -match '(?i)(unknown revision|invalid object name|ambiguous argument|bad revision)') { return 'invalid ref' }
+              if ($Text -match '(?i)(permission denied|access is denied|could not lock|operation not permitted)') { return 'permission' }
+              if ($Text -match '(?i)(cannot find the path|pathspec|does not exist|cannot access)') { return 'path' }
+              return 'generic'
+            }
+            $safeFirstLine = {
+              param([string]$Text)
+              $line = (($Text -split "`r?`n" | Select-Object -First 1) -as [string])
+              $line = $line -replace '(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s,;]+', '$1<redacted>'
+              $line = $line -replace '(?i)((?:token|secret|password)\s*[:=]\s*)[^\s,;]+', '$1<redacted>'
+              $line = $line -replace '(?i)([A-Z]:\\|\\\\)[^\s,;]+', '<path>'
+              $line = $line -replace 'https?://[^\s,;]+', '<url>'
+              $line = $line -replace '\b[0-9a-f]{40}\b', '<sha>'
+              if ($line.Length -gt 180) { $line = $line.Substring(0, 180) }
+              return $line
+            }
+            if (Test-Path -LiteralPath $target.Root -PathType Container) {
+              $gitEntry = Get-Item -LiteralPath (Join-Path $target.Root '.git') -Force -ErrorAction SilentlyContinue
+              $report.gitDirectoryType = if ($null -eq $gitEntry) { 'missing' } elseif ($gitEntry.PSIsContainer) { 'directory' } elseif ($gitEntry.LinkType) { 'link' } else { 'file' }
+              $headOutput = @(& git -c "safe.directory=$($target.Root)" -C $target.Root rev-parse HEAD 2>&1)
+              $headExitCode = $LASTEXITCODE
+              $report.gitCommands.revParseExitCode = $headExitCode
+              if ($headExitCode -eq 0) { $report.actualHEAD = ($headOutput | Out-String).Trim() } else { $report.gitCommands.revParseCategory = & $gitCategory ($headOutput | Out-String); $report.gitCommands.revParseFirstLine = & $safeFirstLine ($headOutput | Out-String) }
+              $statusLines = @(& git -c "safe.directory=$($target.Root)" -C $target.Root status --porcelain --untracked-files=no 2>&1)
+              $statusExitCode = $LASTEXITCODE
+              $report.gitCommands.statusExitCode = $statusExitCode
+              if ($statusExitCode -eq 0) {
+                $report.trackedChangedFiles = @($statusLines | ForEach-Object { if ($_.Length -gt 3) { $_.Substring(3) } })
+              } else { $report.gitCommands.statusCategory = & $gitCategory ($statusLines | Out-String); $report.gitCommands.statusFirstLine = & $safeFirstLine ($statusLines | Out-String) }
+              $receiptPath = Join-Path $target.Root 'work\broker-update-receipt.json'
+              if (Test-Path -LiteralPath $receiptPath -PathType Leaf) {
+                try {
+                  $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json -ErrorAction Stop
+                  $message = if ($receipt.message -is [string]) { $receipt.message.Substring(0, [Math]::Min(500, $receipt.message.Length)) } else { $null }
+                  $report.receipt = [ordered]@{ exists = $true; status = $receipt.status; revision = $receipt.revision; previous = $receipt.previous; completedAt = $receipt.completedAt; message = $message }
+                } catch { $report.receipt = [ordered]@{ exists = $true; parseError = 'invalid JSON' } }
+              } else { $report.receipt = [ordered]@{ exists = $false } }
+              $ops = Join-Path $target.Root 'work\ops'
+              $stdoutPath = Join-Path $ops ('broker-update-' + $revision.Substring(0, 12) + '-' + $target.Suffix + '.out.log')
+              $stderrPath = Join-Path $ops ('broker-update-' + $revision.Substring(0, 12) + '-' + $target.Suffix + '.err.log')
+              $logs = [ordered]@{}
+              foreach ($entry in @(@{ Name = 'stdout'; Path = $stdoutPath }, @{ Name = 'stderr'; Path = $stderrPath })) {
+                if (Test-Path -LiteralPath $entry.Path -PathType Leaf) {
+                  $logs[$entry.Name] = @(Get-Content -LiteralPath $entry.Path -Tail 40 | ForEach-Object {
+                    $_ -replace '(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s,;]+', '$1<redacted>' `
+                       -replace '(?i)((?:token|secret|password)\s*[:=]\s*)[^\s,;]+', '$1<redacted>' `
+                       -replace '(?i)([A-Z]:\\|\\\\)[^\s,;]+', '<path>' `
+                       -replace 'https?://[^\s,;]+', '<url>' `
+                       -replace '\b[0-9a-f]{40}\b', '<sha>' | ForEach-Object { if ($_.Length -gt 300) { $_.Substring(0, 300) } else { $_ } }
+                  })
+                } else { $logs[$entry.Name] = $null }
+              }
+              $report.logs = $logs
+            } else { $report.errors += 'Broker root is missing.' }
+            try {
+              $broker = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
+              $toSid = {
+                param([string]$Principal)
+                if ($Principal -match '^S-\d-') { [System.Security.Principal.SecurityIdentifier]::new($Principal) }
+                else { ([System.Security.Principal.NTAccount]::new($Principal)).Translate([System.Security.Principal.SecurityIdentifier]) }
+              }
+              $currentSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+              $brokerSid = & $toSid ([string]$broker.Principal.UserId)
+              $report.currentUserMatchesBrokerPrincipal = $currentSid -eq $brokerSid
+              $actions = @($broker.Actions | ForEach-Object {
+                $argumentExecutablePath = $null
+                if ($_.Arguments -match '(?i)(?:"([^"\r\n]+\.(?:ps1|cmd|bat|exe))"|([A-Z]:\\[^\s"\r\n]+\.(?:ps1|cmd|bat|exe)))') {
+                  $argumentExecutablePath = if ($Matches[1]) { $Matches[1] } else { $Matches[2] }
+                }
+                [ordered]@{ executePath = $_.Execute; argumentExecutablePath = $argumentExecutablePath }
+              })
+              $report.brokerTask = [ordered]@{ name = $target.BrokerTask; state = $broker.State.ToString(); actions = $actions }
+            } catch { $report.brokerTask = [ordered]@{ name = $target.BrokerTask; error = $_.Exception.Message } }
+            try {
+              $helper = Get-ScheduledTask -TaskName $helperName -ErrorAction Stop
+              $info = Get-ScheduledTaskInfo -TaskName $helperName -ErrorAction Stop
+              $broker = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
+              $helperSid = & $toSid ([string]$helper.Principal.UserId)
+              $brokerSid = & $toSid ([string]$broker.Principal.UserId)
+              $helperActionPaths = @($helper.Actions | ForEach-Object {
+                $scriptPath = $null
+                if ($_.Arguments -match '(?i)-File\s+"?([^"\r\n]+\.ps1)') { $scriptPath = $Matches[1] }
+                [ordered]@{ executePath = $_.Execute; scriptPath = $scriptPath }
+              })
+              $report.updaterTask = [ordered]@{ name = $helperName; state = $helper.State.ToString(); lastTaskResult = $info.LastTaskResult; lastRunTime = $info.LastRunTime; principalMatchesBrokerPrincipal = $helperSid -eq $brokerSid; actions = $helperActionPaths }
+            } catch { $report.updaterTask = [ordered]@{ name = $helperName; error = 'unavailable' } }
+            $reports += [pscustomobject]$report
+          }
+          $reports | ConvertTo-Json -Depth 8
