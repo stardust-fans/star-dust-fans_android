@@ -486,8 +486,7 @@ def validate_ipa(ipa_path: Path, report: dict, team_id: str, bundle_id: str, tem
 
 
 def verify(status_path: Path, output_path: Path, source_path: Path, recipe_sha: str, team_id: str, bundle_id: str,
-           local_profile_path: Path | None = None, phone_record_path: Path | None = None, openssl: str = "openssl",
-           ipa_output_path: Path | None = None) -> dict:
+           local_profile_path: Path | None = None, phone_record_path: Path | None = None, openssl: str = "openssl") -> dict:
     require(HEX_COMMIT.fullmatch(recipe_sha) is not None, "The expected recipe SHA must be a 40-character lowercase commit hash.")
     require(TEAM_ID.fullmatch(team_id) is not None, "The expected team ID must contain ten uppercase letters or digits.")
     require(isinstance(bundle_id, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]{0,254}", bundle_id) is not None,
@@ -515,9 +514,6 @@ def verify(status_path: Path, output_path: Path, source_path: Path, recipe_sha: 
         ipa_path = extract_output_ipa(output_path, status, report, temp_dir)
         version = validate_ipa(ipa_path, report, team_id, bundle_id, temp_dir, openssl,
                                local_profile_path, phone_record_path)
-        if ipa_output_path is not None:
-            require(not ipa_output_path.exists(), "The verified IPA output path already exists.")
-            shutil.copyfile(ipa_path, ipa_output_path)
         return {"output_sha256": sha256_file(output_path), "output_size": output_path.stat().st_size,
                 "ipa_sha256": report["files"][0]["sha256"], "ipa_size": report["files"][0]["size"],
                 "bundle_id": bundle_id, "version": version, "profile_uuid": report["profile_uuid"],
@@ -535,21 +531,38 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bundle-id", required=True)
     parser.add_argument("--profile", type=Path, help="Optional local provisioning profile for cross-checking")
     parser.add_argument("--phone-record", type=Path, help="Optional connected-iphone.json for private membership check")
-    parser.add_argument("--ipa-output", type=Path, help="Copy the IPA to this path after all verification succeeds")
+    parser.add_argument("--receipt-output", type=Path, help="Write a sanitized verification receipt after all checks pass")
+    parser.add_argument("--quiet", action="store_true", help="Suppress verification details from standard output")
     parser.add_argument("--openssl", default="openssl", help="OpenSSL executable")
     args = parser.parse_args(argv)
     try:
         result = verify(args.status, args.signed_zip, args.source_artifact, args.recipe_sha, args.team_id,
-                        args.bundle_id, args.profile, args.phone_record, args.openssl, args.ipa_output)
+                        args.bundle_id, args.profile, args.phone_record, args.openssl)
     except VerificationError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1
-    print(f"Output ZIP SHA-256: {result['output_sha256']} ({result['output_size']} bytes)")
-    print(f"IPA SHA-256: {result['ipa_sha256']} ({result['ipa_size']} bytes)")
-    print(f"Bundle/version: {result['bundle_id']} / {result['version']}")
-    print(f"Profile UUID/device count: {result['profile_uuid']} / {result['authorized_device_count']}")
-    print("Result: PASS")
-    print("CMS signature integrity was checked; certificate-chain trust and Mach-O code-signature validation are attested by the trusted signing runner.")
+    if not args.quiet:
+        print(f"Output ZIP SHA-256: {result['output_sha256']} ({result['output_size']} bytes)")
+        print(f"IPA SHA-256: {result['ipa_sha256']} ({result['ipa_size']} bytes)")
+        print(f"Bundle/version: {result['bundle_id']} / {result['version']}")
+        print(f"Profile UUID/device count: {result['profile_uuid']} / {result['authorized_device_count']}")
+        print("Result: PASS")
+        print("CMS signature integrity was checked; certificate-chain trust and Mach-O code-signature validation are attested by the trusted signing runner.")
+    if args.receipt_output is not None:
+        status = parse_json(read_regular_file(args.status, MAX_JSON_BYTES), "The request status JSON is invalid.")
+        receipt = {
+            "request_id": status["request_id"],
+            "source_sha": status["source_sha"],
+            "bundle_id": result["bundle_id"],
+            "version": result["version"],
+            "output_sha256": result["output_sha256"],
+            "output_size": result["output_size"],
+            "ipa_sha256": result["ipa_sha256"],
+            "ipa_size": result["ipa_size"],
+            "verification": "passed",
+        }
+        require(not args.receipt_output.exists(), "The verification receipt path already exists.")
+        args.receipt_output.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     return 0
 
 

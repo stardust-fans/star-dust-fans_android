@@ -61,7 +61,7 @@ npm test
 
 ### 中央真机签名
 
-仓库需配置 `GITEDGE_SIGNING_TOKEN` Actions secret 和 `GITEDGE_SIGNING_PROFILE` repository variable。在默认分支运行 `iOS signing` workflow 会生成 unsigned Xcode archive、提交 GitEdge 请求、等待签名完成，并按来源和输出 digest/size 下载产物。工作流使用 `test/verify-signed-ipa.py` 核对请求 ID、来源提交、bundle、团队、签名报告、开发证书和设备 provisioning profile；验证通过后才发布 `verified-signed-ios-ipa` artifact，其中包含 signed IPA、签名报告和状态记录。
+仓库需配置 `GITEDGE_SIGNING_TOKEN` Actions secret 和 `GITEDGE_SIGNING_PROFILE` repository variable。在默认分支运行 `iOS signing` workflow 会生成 unsigned Xcode archive、提交 GitEdge 请求、等待签名完成，并按来源和输出 digest/size 下载产物。工作流使用 `test/verify-signed-ipa.py` 核对请求 ID、来源提交、bundle、团队、签名报告、开发证书和设备 provisioning profile。签名 IPA 保留在私有 GitEdge 输出存储；公开 Actions 摘要只记录 request ID、来源提交、bundle/version、SHA-256、大小和验证结果。授权用户可通过 GitEdge 的受保护下载入口取回签名包。
 
 Android 原生真机测试 APK 可用本机 Android SDK 与 JDK 构建。测试 APK 必须使用与待测应用相同的签名密钥：
 

@@ -16,6 +16,7 @@ const SOURCE_WORKFLOW = '.github/workflows/ios-sign.yml';
 const SOURCE_ARTIFACT = 'unsigned-ios-archive';
 const PROFILE = 'stardust-ios';
 const RECIPE_SHA = '70a52dfbe00bae1136f68186d4ad035f74f3cb1d';
+const POLICY_DIGEST = 'sha256:518ffa7c0b89f7f717d47f58853400293744b3e678b520a6292812ab3292a846';
 const TEAM_ID = '76DMUAK6J5';
 const MAX_ARTIFACT_BYTES = 1_000_000_000;
 const POLL_INTERVAL_MS = 15_000;
@@ -155,6 +156,7 @@ export function validateRequestStatus(request, requestId, expected) {
   validateRequestId(requestId);
   validateSigningRequest(request, expected);
   if (request.id !== requestId) throw new Error('SIGNING_REQUEST_ID_MISMATCH');
+  if (request.state === 'succeeded' && request.stage !== 'ios_sign') throw new Error('SIGNING_REQUEST_STAGE_MISMATCH');
   if (request.state === 'failed' || request.state === 'cancelled' || request.state === 'awaiting_source') {
     throw new Error(`SIGNING_REQUEST_${request.state.toUpperCase()}`);
   }
@@ -224,6 +226,13 @@ export async function waitForSigning({ requestId, apiToken, expected, fetchImpl 
   }
 }
 
+export function signingDownloadUrl(requestId) {
+  validateRequestId(requestId);
+  const url = new URL(signingUrl(requestId));
+  url.pathname += '/download';
+  return url;
+}
+
 async function downloadSourceArtifact({ artifactId, runId, sourceSha, githubToken, destination, expectedArtifact, fetchImpl }) {
   const url = `${GITHUB_API}/repos/${SOURCE_REPOSITORY}/actions/artifacts/${encodeURIComponent(artifactId)}/zip`;
   const response = await fetchImpl(url, {
@@ -234,6 +243,7 @@ async function downloadSourceArtifact({ artifactId, runId, sourceSha, githubToke
     await response.body?.cancel();
     throw new Error('SOURCE_ARCHIVE_DOWNLOAD_FAILED');
   }
+  await response.body?.cancel();
   const location = response.headers.get('location');
   let downloadUrl;
   try {
@@ -255,7 +265,7 @@ async function downloadSourceArtifact({ artifactId, runId, sourceSha, githubToke
 }
 
 async function downloadSigningOutput({ request, requestId, apiToken, destination, fetchImpl }) {
-  const response = await fetchImpl(`${signingUrl(requestId)}/download`, {
+  const response = await fetchImpl(signingDownloadUrl(requestId), {
     redirect: 'error', signal: AbortSignal.timeout(120_000),
     headers: { authorization: `Bearer ${apiToken}`, accept: 'application/zip' },
   });
@@ -266,25 +276,31 @@ async function downloadSigningOutput({ request, requestId, apiToken, destination
   return downloadToFile(response, destination, request.outputSize, request.outputDigest, 'SIGNING_OUTPUT_DOWNLOAD');
 }
 
-async function writeVerifierStatus({ outputPath, request, requestId, source, archive }) {
-  const report = await readZipJson(outputPath, 'verification.json');
+export function validateSigningReportBinding(report, { request, requestId, source, sourceDigest }) {
   if (report.request_id !== requestId || report.source_sha !== source.source_sha || report.version !== source.version
-    || report.recipe_sha !== RECIPE_SHA || report.team_id !== TEAM_ID || report.bundle_id !== source.bundle_id) {
+    || report.recipe_sha !== RECIPE_SHA || report.policy_digest !== POLICY_DIGEST || report.team_id !== TEAM_ID
+    || report.bundle_id !== source.bundle_id || report.stage !== 'ios_sign'
+    || report.input_digest !== sourceDigest || sourceDigest !== request.sourceDigest || request.stage !== 'ios_sign') {
     throw new Error('SIGNING_REPORT_BINDING_MISMATCH');
   }
+  return report;
+}
+
+async function writeVerifierStatus({ outputPath, request, requestId, source, sourceDigest, archive }) {
+  const report = validateSigningReportBinding(await readZipJson(outputPath, 'verification.json'),
+    { request, requestId, source, sourceDigest });
   const status = {
     request_id: requestId,
     state: request.state,
     platform: request.platform,
     source_sha: source.source_sha,
     version: source.version,
-    input_digest: report.input_digest,
+    input_digest: sourceDigest,
     output: { archive_size: archive.size, archive_digest: archive.digest, report },
   };
   const path = join(dirname(outputPath), 'signing-status.json');
   await writeFile(path, `${JSON.stringify(status)}\n`, { flag: 'wx' });
-  await writeFile(join(dirname(outputPath), 'verification.json'), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
-  return { path, reportPath: join(dirname(outputPath), 'verification.json') };
+  return path;
 }
 
 export async function retrieveAndVerify({ env = process.env, requestId, fetchImpl = fetch }) {
@@ -304,12 +320,12 @@ export async function retrieveAndVerify({ env = process.env, requestId, fetchImp
   const downloadedSource = await downloadSourceArtifact({ artifactId: env.ARTIFACT_ID, runId: env.GITHUB_RUN_ID,
     sourceSha: env.GITHUB_SHA, githubToken, destination: sourceArchive, expectedArtifact, fetchImpl });
   const downloadedOutput = await downloadSigningOutput({ request, requestId, apiToken, destination: signedArchive, fetchImpl });
-  const { path: statusPath, reportPath } = await writeVerifierStatus({ outputPath: signedArchive, request, requestId, source: downloadedSource.source,
-    archive: downloadedOutput });
+  const statusPath = await writeVerifierStatus({ outputPath: signedArchive, request, requestId, source: downloadedSource.source,
+    sourceDigest: downloadedSource.digest, archive: downloadedOutput });
   const summary = required(env, 'GITHUB_STEP_SUMMARY');
   await appendFile(summary, `GitEdge signing request succeeded: \`${requestId}\`.\n`);
-  await appendFile(required(env, 'GITHUB_OUTPUT'), `status_path=${statusPath}\nsource_archive=${sourceArchive}\nsigned_archive=${signedArchive}\nreport_path=${reportPath}\nrecipe_sha=${RECIPE_SHA}\nteam_id=${TEAM_ID}\n`);
-  return { request, sourceArchive, signedArchive, statusPath, reportPath };
+  await appendFile(required(env, 'GITHUB_OUTPUT'), `status_path=${statusPath}\nsource_archive=${sourceArchive}\nsigned_archive=${signedArchive}\nrecipe_sha=${RECIPE_SHA}\nteam_id=${TEAM_ID}\n`);
+  return { request, sourceArchive, signedArchive, statusPath };
 }
 
 export async function run(env = process.env, fetchImpl = fetch) {

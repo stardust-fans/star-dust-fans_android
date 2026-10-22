@@ -102,7 +102,6 @@ jobs:
           TEAM_ID: ${{ steps.result.outputs.team_id }}
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/verified-ios"
           python3 test/verify-signed-ipa.py \
             --status "$STATUS_PATH" \
             --signed-zip "$SIGNED_ARCHIVE" \
@@ -110,16 +109,6 @@ jobs:
             --recipe-sha "$RECIPE_SHA" \
             --team-id "$TEAM_ID" \
             --bundle-id top.stardustinfinity.mobile \
-            --ipa-output "$RUNNER_TEMP/verified-ios/signed.ipa"
-          cp "${{ steps.result.outputs.report_path }}" "$RUNNER_TEMP/verified-ios/verification.json"
-          cp "$STATUS_PATH" "$RUNNER_TEMP/verified-ios/signing-status.json"
-          echo "GitEdge iOS request ${{ steps.signing.outputs.request_id }} passed signed IPA verification." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload verified signed iOS IPA
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          name: verified-signed-ios-ipa
-          path: ${{ runner.temp }}/verified-ios/*
-          if-no-files-found: error
-          retention-days: 3
-          compression-level: 0
+            --receipt-output "$RUNNER_TEMP/verification-receipt.json" \
+            --quiet
+          cat "$RUNNER_TEMP/verification-receipt.json" >> "$GITHUB_STEP_SUMMARY"
