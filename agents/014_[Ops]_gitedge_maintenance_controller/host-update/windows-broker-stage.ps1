@@ -1,0 +1,132 @@
+$ErrorActionPreference = 'Stop'
+$revision = 'f929b6164fe55c0c510485f9869816f482ee8560'
+$shortRevision = $revision.Substring(0, 12)
+$helperBase64 = 'aW1wb3J0IHsgZXhlY0ZpbGUgfSBmcm9tICdub2RlOmNoaWxkX3Byb2Nlc3MnOwppbXBvcnQgeyBwcm9taXNpZnkgfSBmcm9tICdub2RlOnV0aWwnOwppbXBvcnQgeyBvcGVuLCBta2RpciwgcmVhbHBhdGgsIHJtLCB3cml0ZUZpbGUgfSBmcm9tICdub2RlOmZzL3Byb21pc2VzJzsKaW1wb3J0IHBhdGggZnJvbSAnbm9kZTpwYXRoJzsKaW1wb3J0IG9zIGZyb20gJ25vZGU6b3MnOwoKY29uc3QgZXhlYyA9IHByb21pc2lmeShleGVjRmlsZSk7CmNvbnN0IFtyZXF1ZXN0ZWRSb290LCByZXZpc2lvbiwgdGFza05hbWVdID0gcHJvY2Vzcy5hcmd2LnNsaWNlKDIpOwpsZXQgcm9vdDsKbGV0IHJlY2VpcHRQYXRoOwpsZXQgbG9jazsKbGV0IGxvY2tQYXRoOwp0cnkgewppZiAoIS9eW2EtZjAtOV17NDB9JC8udGVzdChyZXZpc2lvbiA/PyAnJykpIHRocm93IG5ldyBFcnJvcignSW52YWxpZCByZXZpc2lvbicpOwpyb290ID0gYXdhaXQgcmVhbHBhdGgocmVxdWVzdGVkUm9vdCk7CmNvbnN0IGFsbG93ZWQgPSBwcm9jZXNzLnBsYXRmb3JtID09PSAnZGFyd2luJwogID8gW3BhdGguam9pbihvcy5ob21lZGlyKCksICcubG9jYWwvc2hhcmUvZ2l0ZWRnZS9ydW5uZXItYnJva2VyJyldCiAgOiBbJ0Q6XFxHaXRFZGdlXFxydW5uZXItYnJva2VyJywgJ0Q6XFxHaXRFZGdlXFxydW5uZXItYnJva2VyLTInXTsKY29uc3Qgbm9ybWFsaXplID0gKHZhbHVlKSA9PiBwcm9jZXNzLnBsYXRmb3JtID09PSAnd2luMzInID8gdmFsdWUudG9Mb3dlckNhc2UoKSA6IHZhbHVlOwppZiAoIWFsbG93ZWQuc29tZSgodmFsdWUpID0+IG5vcm1hbGl6ZShwYXRoLnJlc29sdmUodmFsdWUpKSA9PT0gbm9ybWFsaXplKHJvb3QpKSkKICB0aHJvdyBuZXcgRXJyb3IoJ1VuZXhwZWN0ZWQgYnJva2VyIHJvb3QnKTsKaWYgKCFbJ2RhcndpbicsICd3aW4zMiddLmluY2x1ZGVzKHByb2Nlc3MucGxhdGZvcm0pKSB0aHJvdyBuZXcgRXJyb3IoJ1Vuc3VwcG9ydGVkIGhvc3QnKTsKcmVjZWlwdFBhdGggPSBwYXRoLmpvaW4ocm9vdCwgJ3dvcmsnLCAnYnJva2VyLXVwZGF0ZS1yZWNlaXB0Lmpzb24nKTsKaWYgKHByb2Nlc3MucGxhdGZvcm0gPT09ICd3aW4zMicgJiYgKCF0YXNrTmFtZSB8fCAhL15bXHcgLigpLV0rJC8udGVzdCh0YXNrTmFtZSkpKQogIHRocm93IG5ldyBFcnJvcignSW52YWxpZCBzY2hlZHVsZWQgdGFzaycpOwpjb25zdCBlbnZpcm9ubWVudCA9IE9iamVjdC5mcm9tRW50cmllcyhPYmplY3QuZW50cmllcyhwcm9jZXNzLmVudikuZmlsdGVyKChba2V5XSkgPT4KICAhL14oPzpHSF98R0lUSFVCX3xHSVRFREdFX3xBQ1RJT05TX3xSVU5ORVJfVFJBQ0tJTkdfSUQkKS9pLnRlc3Qoa2V5KSkpOwpjb25zdCBjb21tYW5kID0gYXN5bmMgKGZpbGUsIGFyZ3MpID0+IHsKICBjb25zdCByZXN1bHQgPSBhd2FpdCBleGVjKGZpbGUsIGFyZ3MsIHsgY3dkOiByb290LCBlbnY6IGVudmlyb25tZW50LCB3aW5kb3dzSGlkZTogdHJ1ZSwgdGltZW91dDogMTIwMDAwLCBtYXhCdWZmZXI6IDEwMjQgKiAxMDI0IH0pOwogIGlmIChyZXN1bHQuc3Rkb3V0LnRyaW0oKSkgY29uc29sZS5sb2cocmVzdWx0LnN0ZG91dC50cmltKCkpOwogIHJldHVybiByZXN1bHQuc3Rkb3V0LnRyaW0oKTsKfTsKY29uc3QgZ2l0ID0gKGFyZ3MpID0+IGNvbW1hbmQoJ2dpdCcsIFsnLWMnLCBgc2FmZS5kaXJlY3Rvcnk9JHtyb290fWAsICctYycsICdjcmVkZW50aWFsLmhlbHBlcj0nLCAnLWMnLCAnY29yZS5hc2tQYXNzPScsIC4uLmFyZ3NdKTsKY29uc3QgdG9wID0gYXdhaXQgZ2l0KFsncmV2LXBhcnNlJywgJy0tc2hvdy10b3BsZXZlbCddKTsKaWYgKG5vcm1hbGl6ZShwYXRoLnJlc29sdmUodG9wKSkgIT09IG5vcm1hbGl6ZShyb290KSkgdGhyb3cgbmV3IEVycm9yKCdVbmV4cGVjdGVkIEdpdCByb290Jyk7CmlmIChhd2FpdCBnaXQoWydzdGF0dXMnLCAnLS1wb3JjZWxhaW4nLCAnLS11bnRyYWNrZWQtZmlsZXM9bm8nXSkpIHRocm93IG5ldyBFcnJvcignQnJva2VyIGNoZWNrb3V0IGhhcyB0cmFja2VkIGNoYW5nZXMnKTsKYXdhaXQgZ2l0KFsnLWMnLCAnaHR0cC5tYXhSZXF1ZXN0cz0xJywgJ2ZldGNoJywgJ2h0dHBzOi8vZ2l0aHViLmNvbS9sc3ktNDA0L2dpdGVkZ2UuZ2l0JywgcmV2aXNpb25dKTsKY29uc3Qgc3RhdGUgPSBwYXRoLmpvaW4ocm9vdCwgJ3dvcmsnLCAnYWN0aW9ucycpOwphd2FpdCBta2RpcihzdGF0ZSwgeyByZWN1cnNpdmU6IHRydWUsIG1vZGU6IDBvNzAwIH0pOwpsb2NrUGF0aCA9IHBhdGguam9pbihzdGF0ZSwgJ2FjdGl2ZS5sb2NrJyk7CmNvbnN0IGRlYWRsaW5lID0gRGF0ZS5ub3coKSArIDMwICogNjBfMDAwOwp3aGlsZSAoIWxvY2sgJiYgRGF0ZS5ub3coKSA8IGRlYWRsaW5lKSB7CiAgdHJ5IHsgbG9jayA9IGF3YWl0IG9wZW4obG9ja1BhdGgsICd3eCcsIDBvNjAwKTsgfQogIGNhdGNoIChlcnJvcikgeyBpZiAoZXJyb3IuY29kZSAhPT0gJ0VFWElTVCcpIHRocm93IGVycm9yOyB9CiAgaWYgKCFsb2NrKSBhd2FpdCBuZXcgUHJvbWlzZSgocmVzb2x2ZSkgPT4gc2V0VGltZW91dChyZXNvbHZlLCAxMDAwKSk7Cn0KaWYgKCFsb2NrKSB0aHJvdyBuZXcgRXJyb3IoJ0Jyb2tlciBkaWQgbm90IGJlY29tZSBpZGxlJyk7CmF3YWl0IGxvY2sud3JpdGVGaWxlKEpTT04uc3RyaW5naWZ5KHsgcGlkOiBwcm9jZXNzLnBpZCwgc3RhcnRlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkgfSkpOwogIGNvbnN0IHByZXZpb3VzID0gYXdhaXQgZ2l0KFsncmV2LXBhcnNlJywgJ0hFQUQnXSk7CiAgaWYgKGF3YWl0IGdpdChbJ3N0YXR1cycsICctLXBvcmNlbGFpbicsICctLXVudHJhY2tlZC1maWxlcz1ubyddKSkgdGhyb3cgbmV3IEVycm9yKCdCcm9rZXIgY2hlY2tvdXQgY2hhbmdlZCB3aGlsZSB3YWl0aW5nJyk7CiAgYXdhaXQgZ2l0KFsnbWVyZ2UtYmFzZScsICctLWlzLWFuY2VzdG9yJywgJ0hFQUQnLCByZXZpc2lvbl0pOwogIGF3YWl0IGdpdChbJy1jJywgJ2h0dHAubWF4UmVxdWVzdHM9MScsICdmZXRjaCcsICdodHRwczovL2dpdGh1Yi5jb20vbHN5LTQwNC9naXRlZGdlLmdpdCcsICdyZWZzL2hlYWRzL21haW4nXSk7CiAgYXdhaXQgZ2l0KFsnbWVyZ2UtYmFzZScsICctLWlzLWFuY2VzdG9yJywgcmV2aXNpb24sICdGRVRDSF9IRUFEJ10pOwogIGF3YWl0IGdpdChbJ21lcmdlJywgJy0tZmYtb25seScsICctLW5vLWVkaXQnLCByZXZpc2lvbl0pOwogIGF3YWl0IGNvbW1hbmQocHJvY2Vzcy5leGVjUGF0aCwgWyctLWNoZWNrJywgJ3NjcmlwdHMvcnVubmVyLWJyb2tlci5tanMnXSk7CiAgYXdhaXQgY29tbWFuZChwcm9jZXNzLmV4ZWNQYXRoLCBbJy0taW5wdXQtdHlwZT1tb2R1bGUnLCAnLWUnLCAiYXdhaXQgaW1wb3J0KCcuL3NjcmlwdHMvcnVubmVyLWJyb2tlci1zaWduaW5nLXdvcmtmbG93Lm1qcycpIl0pOwogIGlmIChwcm9jZXNzLnBsYXRmb3JtID09PSAnZGFyd2luJykgewogICAgYXdhaXQgY29tbWFuZCgnL2Jpbi9sYXVuY2hjdGwnLCBbJ2tpY2tzdGFydCcsICctaycsIGBndWkvJHtwcm9jZXNzLmdldHVpZCgpfS9jb20uZ2l0ZWRnZS5ydW5uZXItYnJva2VyYF0pOwogICAgY29uc3Qgc2VydmljZUFyZ3MgPSBbJ3ByaW50JywgYGd1aS8ke3Byb2Nlc3MuZ2V0dWlkKCl9L2NvbS5naXRlZGdlLnJ1bm5lci1icm9rZXJgXTsKICAgIGNvbnN0IGRlYWRsaW5lID0gRGF0ZS5ub3coKSArIDQ1XzAwMDsKICAgIGxldCBydW5uaW5nID0gZmFsc2U7CiAgICB3aGlsZSAoIXJ1bm5pbmcgJiYgRGF0ZS5ub3coKSA8IGRlYWRsaW5lKSB7CiAgICAgIHRyeSB7CiAgICAgICAgY29uc3Qgc2VydmljZSA9IGF3YWl0IGV4ZWMoJy9iaW4vbGF1bmNoY3RsJywgc2VydmljZUFyZ3MsIHsgZW52OiBlbnZpcm9ubWVudCwgdGltZW91dDogNTAwMCB9KTsKICAgICAgICBydW5uaW5nID0gL3N0YXRlID0gcnVubmluZy9pLnRlc3Qoc2VydmljZS5zdGRvdXQpOwogICAgICB9IGNhdGNoIHt9CiAgICAgIGlmICghcnVubmluZykgYXdhaXQgbmV3IFByb21pc2UoKHJlc29sdmUpID0+IHNldFRpbWVvdXQocmVzb2x2ZSwgNTAwKSk7CiAgICB9CiAgICBpZiAoIXJ1bm5pbmcpIHRocm93IG5ldyBFcnJvcignQnJva2VyIHNlcnZpY2UgZGlkIG5vdCBzdGFydCcpOwogICAgY29uc29sZS5sb2coJ0Jyb2tlciBzZXJ2aWNlIGlzIHJ1bm5pbmcuJyk7CiAgfSBlbHNlIHsKICAgIGNvbnN0IHF1b3RlZFRhc2sgPSAiJyIgKyB0YXNrTmFtZS5yZXBsYWNlQWxsKCInIiwgIicnIikgKyAiJyI7CiAgICBhd2FpdCBjb21tYW5kKCdwb3dlcnNoZWxsLmV4ZScsIFsnLU5vTG9nbycsICctTm9Qcm9maWxlJywgJy1Ob25JbnRlcmFjdGl2ZScsICctQ29tbWFuZCcsIGAkRXJyb3JBY3Rpb25QcmVmZXJlbmNlPSdTdG9wJwokdGFza05hbWU9JHtxdW90ZWRUYXNrfQokdGFzaz1HZXQtU2NoZWR1bGVkVGFzayAtVGFza05hbWUgJHRhc2tOYW1lIC1FcnJvckFjdGlvbiBTdG9wClN0b3AtU2NoZWR1bGVkVGFzayAtSW5wdXRPYmplY3QgJHRhc2sKJGRlYWRsaW5lPShHZXQtRGF0ZSkuQWRkU2Vjb25kcyg0NSkKZG8gewogIFN0YXJ0LVNsZWVwIC1NaWxsaXNlY29uZHMgMjUwCiAgJHN0YXRlPShHZXQtU2NoZWR1bGVkVGFzayAtVGFza05hbWUgJHRhc2tOYW1lIC1FcnJvckFjdGlvbiBTdG9wKS5TdGF0ZQp9IHdoaWxlICgkc3RhdGUgLWVxICdSdW5uaW5nJyAtYW5kIChHZXQtRGF0ZSkgLWx0ICRkZWFkbGluZSkKaWYgKCRzdGF0ZSAtbmUgJ1JlYWR5JykgeyB0aHJvdyAiQnJva2VyIHRhc2sgZGlkIG5vdCBzdG9wIGNsZWFubHkgKHN0YXRlOiAkc3RhdGUpLiIgfQpTdGFydC1TY2hlZHVsZWRUYXNrIC1UYXNrTmFtZSAkdGFza05hbWUKJGRlYWRsaW5lPShHZXQtRGF0ZSkuQWRkU2Vjb25kcyg0NSkKZG8gewogIFN0YXJ0LVNsZWVwIC1NaWxsaXNlY29uZHMgMjUwCiAgJHN0YXRlPShHZXQtU2NoZWR1bGVkVGFzayAtVGFza05hbWUgJHRhc2tOYW1lIC1FcnJvckFjdGlvbiBTdG9wKS5TdGF0ZQp9IHdoaWxlICgkc3RhdGUgLW5lICdSdW5uaW5nJyAtYW5kIChHZXQtRGF0ZSkgLWx0ICRkZWFkbGluZSkKaWYgKCRzdGF0ZSAtbmUgJ1J1bm5pbmcnKSB7IHRocm93ICJCcm9rZXIgdGFzayBkaWQgbm90IHN0YXJ0IChzdGF0ZTogJHN0YXRlKS4iIH0KV3JpdGUtT3V0cHV0ICdCcm9rZXIgdGFzayBpcyBydW5uaW5nIHdoaWxlIGV4ZWN1dGlvbiBzbG90IGlzIGhlbGQuJ2BdKTsKICB9CiAgYXdhaXQgd3JpdGVGaWxlKHJlY2VpcHRQYXRoLCBKU09OLnN0cmluZ2lmeSh7IHN0YXR1czogJ3N1Y2Nlc3MnLCBwcmV2aW91cywgcmV2aXNpb24sIGNvbXBsZXRlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkgfSkgKyAnXG4nLCB7IG1vZGU6IDBvNjAwIH0pOwp9IGNhdGNoIChlcnJvcikgewogIHRyeSB7CiAgICBpZiAoIXJlY2VpcHRQYXRoKSB0aHJvdyBlcnJvcjsKICAgIGF3YWl0IHdyaXRlRmlsZShyZWNlaXB0UGF0aCwgSlNPTi5zdHJpbmdpZnkoeyBzdGF0dXM6ICdmYWlsdXJlJywgcmV2aXNpb24sIG1lc3NhZ2U6IGVycm9yLm1lc3NhZ2UsIGNvbXBsZXRlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkgfSkgKyAnXG4nLCB7IG1vZGU6IDBvNjAwIH0pOwogIH0gY2F0Y2gge30KICB0aHJvdyBlcnJvcjsKfSBmaW5hbGx5IHsKICBpZiAobG9jaykgewogICAgYXdhaXQgbG9jay5jbG9zZSgpOwogICAgYXdhaXQgcm0obG9ja1BhdGgpOwogIH0KfQo='
+$helperSource = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($helperBase64))
+$nodePath = (Get-Command node.exe -ErrorAction Stop).Source
+$powershellPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
+$targets = @(
+  @{ Root = 'D:\GitEdge\runner-broker'; BrokerTask = 'GitEdgeRunnerBroker'; Suffix = '1' },
+  @{ Root = 'D:\GitEdge\runner-broker-2'; BrokerTask = 'GitEdgeRunnerBroker-2'; Suffix = '2' }
+)
+
+function Get-PrincipalSid {
+  param([string]$UserId)
+  if ($UserId -match '^S-\d-') { return [System.Security.Principal.SecurityIdentifier]::new($UserId) }
+  return ([System.Security.Principal.NTAccount]::new($UserId)).Translate([System.Security.Principal.SecurityIdentifier])
+}
+
+function Get-ArgumentTokens {
+  param([string]$Arguments)
+  return @([regex]::Matches($Arguments, '"([^"]*)"|(\S+)') | ForEach-Object {
+    if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value }
+  })
+}
+
+$prepared = @()
+foreach ($target in $targets) {
+  $root = [IO.Path]::GetFullPath($target.Root)
+  $resolvedRoot = (Resolve-Path -LiteralPath $root -ErrorAction Stop).Path
+  if (-not [string]::Equals($root, $resolvedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Broker root did not resolve to the fixed path.' }
+  $gitEntry = Get-Item -LiteralPath (Join-Path $root '.git') -Force -ErrorAction Stop
+  if (-not $gitEntry.PSIsContainer -or ($gitEntry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Broker Git directory is not a normal directory.' }
+
+  $ops = Join-Path $root 'work\ops'
+  $opsEntry = Get-Item -LiteralPath $ops -Force -ErrorAction Stop
+  if (-not $opsEntry.PSIsContainer -or ($opsEntry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Operations directory is not a normal directory.' }
+  $helperPath = Join-Path $ops 'update-idle-broker.mjs'
+  $existingHelper = Get-Item -LiteralPath $helperPath -Force -ErrorAction Stop
+  if ($existingHelper.PSIsContainer -or ($existingHelper.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Updater helper is not a normal file.' }
+
+  $broker = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
+  if ($broker.State.ToString() -ne 'Running') { throw 'Persistent broker task is not running.' }
+  if ($broker.Principal.LogonType -notin @('Interactive', 'InteractiveToken') -or $broker.Principal.RunLevel -ne 'Limited') { throw 'Broker task principal is not the approved interactive limited principal.' }
+  $helperTaskName = 'GitEdgeBrokerUpdate-' + $shortRevision + '-' + $target.Suffix
+  $oldHelperTask = Get-ScheduledTask -TaskName $helperTaskName -ErrorAction Stop
+  if ($oldHelperTask.State.ToString() -ne 'Ready') { throw 'Updater task is not inactive and ready.' }
+  $oldHelperInfo = Get-ScheduledTaskInfo -TaskName $helperTaskName -ErrorAction Stop
+  if ($oldHelperInfo.LastTaskResult -ne 1 -or $oldHelperInfo.LastRunTime -eq [datetime]::MinValue) { throw 'Updater task does not match the known failed inactive attempt.' }
+  if ((Get-PrincipalSid ([string]$broker.Principal.UserId)).Value -ne (Get-PrincipalSid ([string]$oldHelperTask.Principal.UserId)).Value) {
+    throw 'Updater task principal does not match its broker principal.'
+  }
+  if ($oldHelperTask.Actions.Count -ne 1) { throw 'Updater task must have exactly one action.' }
+  $oldAction = $oldHelperTask.Actions[0]
+  if (-not [string]::Equals([IO.Path]::GetFullPath([string]$oldAction.Execute), [IO.Path]::GetFullPath($nodePath), [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Updater action executable does not match the known Node runtime.'
+  }
+  $arguments = Get-ArgumentTokens ([string]$oldAction.Arguments)
+  $expectedArguments = @($helperPath, $root, $revision, $target.BrokerTask)
+  if ($arguments.Count -ne $expectedArguments.Count) { throw 'Updater task arguments do not match the expected helper invocation.' }
+  for ($index = 0; $index -lt $expectedArguments.Count; $index++) {
+    if (-not [string]::Equals([string]$arguments[$index], [string]$expectedArguments[$index], [StringComparison]::OrdinalIgnoreCase)) {
+      throw 'Updater task arguments do not match the expected helper invocation.'
+    }
+  }
+
+  $wrapperPath = Join-Path $ops ('run-broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.ps1')
+  $stdoutPath = Join-Path $ops ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.out.log')
+  $stderrPath = Join-Path $ops ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.err.log')
+  foreach ($path in @($wrapperPath, $stdoutPath, $stderrPath)) {
+    if (Test-Path -LiteralPath $path) { throw 'A new updater log or wrapper path already exists.' }
+  }
+  $prepared += [pscustomobject]@{
+    Root = $root
+    BrokerTask = $target.BrokerTask
+    HelperTaskName = $helperTaskName
+    BrokerPrincipal = $broker.Principal
+    HelperPath = $helperPath
+    WrapperPath = $wrapperPath
+    StdoutPath = $stdoutPath
+    StderrPath = $stderrPath
+    PreviousRunTime = $oldHelperInfo.LastRunTime
+  }
+}
+
+$wrapperTemplate = @'
+$ErrorActionPreference = 'Stop'
+$nodePath = __NODE__
+$helperPath = __HELPER__
+$root = __ROOT__
+$revision = __REVISION__
+$brokerTask = __BROKER_TASK__
+$stdoutPath = __STDOUT__
+$stderrPath = __STDERR__
+try {
+  $process = Start-Process -FilePath $nodePath -ArgumentList @($helperPath, $root, $revision, $brokerTask) -WorkingDirectory $root -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+  exit $process.ExitCode
+} catch {
+  [IO.File]::AppendAllText($stderrPath, ($_.ToString() + [Environment]::NewLine))
+  exit 1
+}
+'@
+$quote = { param([string]$value) "'" + $value.Replace("'", "''") + "'" }
+
+foreach ($entry in $prepared) {
+  [IO.File]::WriteAllText($entry.HelperPath, $helperSource, [Text.UTF8Encoding]::new($false))
+  $wrapper = $wrapperTemplate.Replace('__NODE__', (& $quote $nodePath)).Replace('__HELPER__', (& $quote $entry.HelperPath)).Replace('__ROOT__', (& $quote $entry.Root)).Replace('__REVISION__', (& $quote $revision)).Replace('__BROKER_TASK__', (& $quote $entry.BrokerTask)).Replace('__STDOUT__', (& $quote $entry.StdoutPath)).Replace('__STDERR__', (& $quote $entry.StderrPath))
+  [IO.File]::WriteAllText($entry.WrapperPath, $wrapper, [Text.UTF8Encoding]::new($false))
+}
+
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 35) -MultipleInstances IgnoreNew
+foreach ($entry in $prepared) {
+  $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}"' -f $entry.WrapperPath
+  $action = New-ScheduledTaskAction -Execute $powershellPath -Argument $arguments -WorkingDirectory $entry.Root
+  Set-ScheduledTask -TaskName $entry.HelperTaskName -Action $action -Principal $entry.BrokerPrincipal -Settings $settings | Out-Null
+}
+
+foreach ($entry in $prepared) { Start-ScheduledTask -TaskName $entry.HelperTaskName }
+
+$started = @()
+foreach ($entry in $prepared) {
+  $deadline = (Get-Date).AddSeconds(10)
+  do {
+    Start-Sleep -Milliseconds 250
+    $task = Get-ScheduledTask -TaskName $entry.HelperTaskName -ErrorAction Stop
+    $info = Get-ScheduledTaskInfo -TaskName $entry.HelperTaskName -ErrorAction Stop
+    $newRun = $info.LastRunTime -gt $entry.PreviousRunTime
+    if ($task.State.ToString() -in @('Running', 'Queued') -or $newRun) { break }
+  } while ((Get-Date) -lt $deadline)
+  if ($task.State.ToString() -notin @('Running', 'Queued') -and -not $newRun) { throw 'Updater task did not begin after Start-ScheduledTask.' }
+  $started += [ordered]@{ root = $entry.Root; task = $entry.HelperTaskName; state = $task.State.ToString(); lastTaskResult = $info.LastTaskResult; started = $true }
+}
+$started | ConvertTo-Json -Compress -Depth 4
