@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "dad3f3d46f460ac1c2d9f45f17d8cc8d874751e3549fd9b519eede47c137bd5d",
+  "a736ac32ed569116374d913c0371bbfe1fcedee15974e7222834f9794fe05854",
 ]);
 const windowsDiagnostic = payloadBytes[0].toString("utf8");
 assert.match(windowsDiagnostic, /revParseExitCode/);
@@ -40,8 +40,11 @@ assert.match(windowsDiagnostic, /statusCategory/);
 assert.match(windowsDiagnostic, /gitDirectoryType/);
 assert.match(windowsDiagnostic, /currentUserMatchesBrokerPrincipal/);
 assert.match(windowsDiagnostic, /dubious ownership/);
+assert.match(windowsDiagnostic, /safe\.directory=\$\(\$target\.Root\)/);
+assert.match(windowsDiagnostic, /principalMatchesBrokerPrincipal/);
+assert.match(windowsDiagnostic, /SecurityIdentifier/);
 assert.match(windowsDiagnostic, /<redacted>/);
-assert.match(windowsDiagnostic, /report\.currentUserMatchesBrokerPrincipal\s*=\s*\[string\]::Equals/);
+assert.match(windowsDiagnostic, /report\.currentUserMatchesBrokerPrincipal\s*=\s*\$currentSid\s*-eq\s*\$brokerSid/);
 assert.doesNotMatch(windowsDiagnostic, /currentUsername\s*=/);
 
 const initialOid = "a".repeat(40);
