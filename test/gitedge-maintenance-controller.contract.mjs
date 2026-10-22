@@ -28,20 +28,23 @@ const filesMatch = source.match(/const files = (\[[^\n]+\]);/);
 assert.ok(filesMatch, "fixed payload list must be inline JSON");
 const files = JSON.parse(filesMatch[1]);
 assert.deepEqual(files.map((file) => file.path), [
-  ".github/workflows/windows-broker-verify-cleanup.yml",
+  ".github/workflows/windows-broker-state-diagnostics.yml",
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "d17de46990ed908cd9cbfe4ddac477d7160e9b81e7fedc25a3936b5928282052",
+  "4f139072723a054af7c3bbd04853fe242b9a777156290444fca22a214eea36dd",
 ]);
-const windowsReadback = payloadBytes[0].toString("utf8");
-assert.match(windowsReadback, /safe\.directory=\$\(\$target\.Root\)/);
-assert.match(windowsReadback, /messageCategory/);
-assert.match(windowsReadback, /StderrCategory/);
-assert.match(windowsReadback, /Unregister-ScheduledTask -TaskName \$entry\.HelperTask/);
-assert.doesNotMatch(windowsReadback, /Stop-ScheduledTask/);
-assert.doesNotMatch(windowsReadback, /Write-Output.*\$stderr/);
-assert.doesNotMatch(windowsReadback, /secrets\.|GITHUB_TOKEN|GITEDGE_SIGNING_TOKEN/);
+const windowsDiagnostics = payloadBytes[0].toString("utf8");
+assert.match(windowsDiagnostics, /safe\.directory=\$\(\$target\.Root\)/);
+assert.match(windowsDiagnostics, /messageCategory/);
+assert.match(windowsDiagnostics, /currentUserMatchesPrincipal = \(\$currentSid -eq \$brokerSid\)/);
+assert.match(windowsDiagnostics, /lastTaskResult = \$brokerInfo\.LastTaskResult/);
+assert.match(windowsDiagnostics, /commandCategoryCounts/);
+assert.match(windowsDiagnostics, /Get-LogFlags/);
+assert.match(windowsDiagnostics, /Get-SafeArgv/);
+assert.doesNotMatch(windowsDiagnostics, /Unregister-ScheduledTask|Stop-ScheduledTask|Start-ScheduledTask|Restart-Service|Stop-Process/);
+assert.doesNotMatch(windowsDiagnostics, /Write-Output.*\$receipt\.message|Write-Output.*\$process\.CommandLine/);
+assert.doesNotMatch(windowsDiagnostics, /secrets\.|GITHUB_TOKEN|GITEDGE_SIGNING_TOKEN/);
 const initialOid = "a".repeat(40);
 const commitOid = "b".repeat(40);
 const calls = [];
