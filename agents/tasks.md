@@ -16,3 +16,4 @@
 | 011 | [BugFix] NavigationBar | 清理 Apple 底栏栏目布局并将返回/刷新/分享移入顶部更多菜单 | 真机确认原有控件挤压栏目按钮 | ✅ 已完成 |
 | 012 | [Investigation] WebViewBlackScreen | 对照启动方式下黑屏与正常显示证据并记录验收建议 | 宿主进程仍前台存活但页面不可见 | ✅ 已完成 |
 | 013 | [Ops] GitEdgeiOSSigning | 将 iOS 签名请求迁移到 GitEdge 原生来源工件合同 | 完成旧签名执行器退役准备 | 🔄 进行中 |
+| 014 | [Ops] GitEdgeMaintenanceController | 在正确 Android 仓库中安装固定的一次性主机维护 controller | 使用授权的 Runner API 凭据执行主机验收 | 🔄 进行中 |

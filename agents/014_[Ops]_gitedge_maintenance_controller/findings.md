@@ -1,0 +1,5 @@
+# Findings
+- The workflow and contract test are for the Android repository `stardust-fans/star-dust-fans_android`; its exact origin URL is `https://github.com/stardust-fans/star-dust-fans_android.git`, repository ID `13814fa3-8580-4b5a-803e-a6b1206007ed`.
+- A prior delivery targeted the similarly named website repository. Its PR was closed after discovery. The associated pull-request build completed; the workflow gates D1 migrations and production Worker deployment to pushes or manual dispatches on `main`. A PR-only preview-version upload step could run, so the event was not production deployment-free in the broader preview sense.
+- The maintenance controller has fixed workflow payloads, gets the current branch OID, commits both files using that OID as the compare-and-swap precondition, then dispatches each workflow pinned to the resulting commit.
+- API calls reject redirects and time out after 30 seconds. Failure output is constrained to fixed labels, HTTP status, and allowlisted service error codes; response messages and authorization values are not logged.
