@@ -92,4 +92,3 @@ jobs:
             Unregister-ScheduledTask -TaskName $entry.HelperTask -Confirm:$false
           }
           Write-Output "Windows broker updates verified at revision $revision; both broker tasks are running; temporary updater tasks removed."
-          
