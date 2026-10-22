@@ -67,6 +67,7 @@ jobs:
           compression-level: 0
 
       - name: Submit source archive to GitEdge
+        id: signing
         env:
           ARTIFACT_ID: ${{ steps.unsigned.outputs.artifact-id }}
           APP_VERSION: ${{ steps.source.outputs.version }}
@@ -74,3 +75,40 @@ jobs:
           GITEDGE_SIGNING_PROFILE: ${{ vars.GITEDGE_SIGNING_PROFILE }}
           GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/ios-sign-api.mjs
+
+      - name: Wait for and download verified signing output
+        id: result
+        env:
+          ARTIFACT_ID: ${{ steps.unsigned.outputs.artifact-id }}
+          GITEDGE_SIGNING_TOKEN: ${{ secrets.GITEDGE_SIGNING_TOKEN }}
+          GITEDGE_SIGNING_PROFILE: ${{ vars.GITEDGE_SIGNING_PROFILE }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REQUEST_ID: ${{ steps.signing.outputs.request_id }}
+          SOURCE_DIGEST: ${{ steps.signing.outputs.source_digest }}
+          SOURCE_SIZE: ${{ steps.signing.outputs.source_size }}
+        run: node .github/scripts/ios-sign-api.mjs retrieve
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+
+      - name: Verify signed iOS IPA
+        env:
+          STATUS_PATH: ${{ steps.result.outputs.status_path }}
+          SOURCE_ARCHIVE: ${{ steps.result.outputs.source_archive }}
+          SIGNED_ARCHIVE: ${{ steps.result.outputs.signed_archive }}
+          RECIPE_SHA: ${{ steps.result.outputs.recipe_sha }}
+          TEAM_ID: ${{ steps.result.outputs.team_id }}
+        run: |
+          set -euo pipefail
+          python3 test/verify-signed-ipa.py \
+            --status "$STATUS_PATH" \
+            --signed-zip "$SIGNED_ARCHIVE" \
+            --source-artifact "$SOURCE_ARCHIVE" \
+            --recipe-sha "$RECIPE_SHA" \
+            --team-id "$TEAM_ID" \
+            --bundle-id top.stardustinfinity.mobile \
+            --receipt-output "$RUNNER_TEMP/verification-receipt.json" \
+            --quiet
+          cat "$RUNNER_TEMP/verification-receipt.json" >> "$GITHUB_STEP_SUMMARY"

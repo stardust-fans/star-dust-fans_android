@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { requestBody, run, sourceArtifactMetadata } from '../.github/scripts/ios-sign-api.mjs';
+import { downloadToFile, requestBody, run, signingDownloadUrl, sourceArtifactMetadata, validateRequestStatus, validateSigningReportBinding } from '../.github/scripts/ios-sign-api.mjs';
 
 const requestId = '3e8a9c51-8d06-4e22-bcf7-c7464b05c2fd';
 const repoId = '13814fa3-8580-4b5a-803e-a6b1206007ed';
@@ -76,11 +76,58 @@ test('submission validates GitHub source identity and sends native GitEdge reque
     const request = await run(submitEnv(output, summary), fetchImpl);
     assert.equal(request.id, requestId);
     assert.equal(calls.length, 4);
-    assert.equal((await readFile(output, 'utf8')).trim(), `request_id=${requestId}`);
+    assert.equal((await readFile(output, 'utf8')).trim(), `request_id=${requestId}\nsource_digest=${digest}\nsource_size=777`);
     const text = await readFile(summary, 'utf8');
     assert.match(text, new RegExp(requestId));
-    assert.match(text, /central administrator interface/);
-    assert.doesNotMatch(text, /download operation|signed-ipa artifact/i);
+    assert.match(text, /wait for completion and verify/);
+    assert.doesNotMatch(text, /central administrator interface/i);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('request polling binds the exact request and stops on failed terminal state', () => {
+  const expected = { profile: 'stardust-ios', platform: 'ios', sourceDigest: digest, sourceSize: 777 };
+  const request = { id: requestId, repositoryId: repoId, profile: expected.profile, platform: 'ios',
+    sourceDigest: digest, sourceSize: 777, state: 'running' };
+  assert.equal(validateRequestStatus(request, requestId, expected).state, 'running');
+  assert.throws(() => validateRequestStatus(request, '6b91ace2-0021-4d70-b7a3-ac06009d56a9', expected), /SIGNING_REQUEST_ID_MISMATCH/);
+  assert.throws(() => validateRequestStatus({ ...request, state: 'failed' }, requestId, expected), /SIGNING_REQUEST_FAILED/);
+  assert.throws(() => validateRequestStatus({ ...request, state: 'succeeded', stage: 'finalize', outputDigest: digest, outputSize: 1 }, requestId, expected), /SIGNING_REQUEST_STAGE_MISMATCH/);
+});
+
+test('signing download URL keeps request path, suffix, and repository query separate', () => {
+  const url = signingDownloadUrl(requestId);
+  assert.equal(url.pathname, `/api/actions/signing/requests/${requestId}/download`);
+  assert.equal(url.searchParams.get('repositoryId'), repoId);
+  assert.deepEqual([...url.searchParams.keys()], ['repositoryId']);
+});
+
+test('verification report binds source digest and approved signing policy', () => {
+  const source = { source_sha: sourceSha, version, bundle_id: 'top.stardustinfinity.mobile' };
+  const request = { id: requestId, stage: 'ios_sign', sourceDigest: digest };
+  const report = { request_id: requestId, source_sha: sourceSha, version, recipe_sha: '70a52dfbe00bae1136f68186d4ad035f74f3cb1d',
+    policy_digest: 'sha256:518ffa7c0b89f7f717d47f58853400293744b3e678b520a6292812ab3292a846',
+    team_id: '76DMUAK6J5', bundle_id: source.bundle_id, stage: 'ios_sign', input_digest: digest };
+  assert.equal(validateSigningReportBinding(report, { request, requestId, source, sourceDigest: digest }), report);
+  assert.throws(() => validateSigningReportBinding({ ...report, input_digest: `sha256:${'0'.repeat(64)}` },
+    { request, requestId, source, sourceDigest: digest }), /SIGNING_REPORT_BINDING_MISMATCH/);
+  assert.throws(() => validateSigningReportBinding({ ...report, policy_digest: `sha256:${'0'.repeat(64)}` },
+    { request, requestId, source, sourceDigest: digest }), /SIGNING_REPORT_BINDING_MISMATCH/);
+});
+
+test('download rejects bytes that disagree with the status digest or size', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ios-sign-download-'));
+  const bytes = Buffer.from('signed archive');
+  const correct = `sha256:${(await import('node:crypto')).createHash('sha256').update(bytes).digest('hex')}`;
+  try {
+    await assert.rejects(downloadToFile(new Response(bytes, { headers: { 'content-length': String(bytes.length) } }),
+      join(dir, 'tampered.zip'), bytes.length, `sha256:${'0'.repeat(64)}`, 'SIGNING_OUTPUT_DOWNLOAD'), /DIGEST_MISMATCH/);
+    const valid = await downloadToFile(new Response(bytes, { headers: { 'content-length': String(bytes.length) } }),
+      join(dir, 'valid.zip'), bytes.length, correct, 'SIGNING_OUTPUT_DOWNLOAD');
+    assert.deepEqual(valid, { size: bytes.length, digest: correct });
+    await assert.rejects(downloadToFile(new Response(bytes, { headers: { 'content-length': String(bytes.length) } }),
+      join(dir, 'wrong-size.zip'), bytes.length + 1, correct, 'SIGNING_OUTPUT_DOWNLOAD'), /SIZE_MISMATCH/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -108,12 +155,18 @@ test('submission rejects mismatched GitEdge responses and does not reveal respon
   await assert.rejects(run(submitEnv('unused-output', 'unused-summary'), fetchImpl), /SIGNING_REQUEST_MISMATCH/);
 });
 
-test('public workflow uploads only the unsigned source and requests the required identity permissions', async () => {
+test('public workflow submits, waits, verifies, and publishes only a sanitized receipt', async () => {
   const workflow = await readFile(new URL('../.github/workflows/ios-sign.yml', import.meta.url), 'utf8');
   assert.match(workflow, /name: unsigned-ios-archive/);
   assert.match(workflow, /id-token: write/);
   assert.match(workflow, /actions: read/);
   assert.match(workflow, /GITEDGE_SIGNING_TOKEN:/);
   assert.match(workflow, /GITEDGE_SIGNING_PROFILE:/);
-  assert.doesNotMatch(workflow, /SIGNING_API_KEY|sign\.voidcarve\.com|OPERATION:|signed-ipa|download/i);
+  assert.match(workflow, /node \.github\/scripts\/ios-sign-api\.mjs retrieve/);
+  assert.match(workflow, /test\/verify-signed-ipa\.py/);
+  assert.match(workflow, /--receipt-output/);
+  assert.equal((workflow.match(/uses: actions\/upload-artifact@/g) ?? []).length, 1);
+  assert.match(workflow, /name: unsigned-ios-archive/);
+  assert.doesNotMatch(workflow, /verified-signed-ios-ipa|Upload verified signed iOS IPA|actions\/upload-artifact.*signed/i);
+  assert.doesNotMatch(workflow, /SIGNING_API_KEY|sign\.voidcarve\.com|OPERATION:/i);
 });

@@ -531,6 +531,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bundle-id", required=True)
     parser.add_argument("--profile", type=Path, help="Optional local provisioning profile for cross-checking")
     parser.add_argument("--phone-record", type=Path, help="Optional connected-iphone.json for private membership check")
+    parser.add_argument("--receipt-output", type=Path, help="Write a sanitized verification receipt after all checks pass")
+    parser.add_argument("--quiet", action="store_true", help="Suppress verification details from standard output")
     parser.add_argument("--openssl", default="openssl", help="OpenSSL executable")
     args = parser.parse_args(argv)
     try:
@@ -539,12 +541,28 @@ def main(argv: list[str] | None = None) -> int:
     except VerificationError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1
-    print(f"Output ZIP SHA-256: {result['output_sha256']} ({result['output_size']} bytes)")
-    print(f"IPA SHA-256: {result['ipa_sha256']} ({result['ipa_size']} bytes)")
-    print(f"Bundle/version: {result['bundle_id']} / {result['version']}")
-    print(f"Profile UUID/device count: {result['profile_uuid']} / {result['authorized_device_count']}")
-    print("Result: PASS")
-    print("CMS signature integrity was checked; certificate-chain trust and Mach-O code-signature validation are attested by the trusted signing runner.")
+    if not args.quiet:
+        print(f"Output ZIP SHA-256: {result['output_sha256']} ({result['output_size']} bytes)")
+        print(f"IPA SHA-256: {result['ipa_sha256']} ({result['ipa_size']} bytes)")
+        print(f"Bundle/version: {result['bundle_id']} / {result['version']}")
+        print(f"Profile UUID/device count: {result['profile_uuid']} / {result['authorized_device_count']}")
+        print("Result: PASS")
+        print("CMS signature integrity was checked; certificate-chain trust and Mach-O code-signature validation are attested by the trusted signing runner.")
+    if args.receipt_output is not None:
+        status = parse_json(read_regular_file(args.status, MAX_JSON_BYTES), "The request status JSON is invalid.")
+        receipt = {
+            "request_id": status["request_id"],
+            "source_sha": status["source_sha"],
+            "bundle_id": result["bundle_id"],
+            "version": result["version"],
+            "output_sha256": result["output_sha256"],
+            "output_size": result["output_size"],
+            "ipa_sha256": result["ipa_sha256"],
+            "ipa_size": result["ipa_size"],
+            "verification": "passed",
+        }
+        require(not args.receipt_output.exists(), "The verification receipt path already exists.")
+        args.receipt_output.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     return 0
 
 

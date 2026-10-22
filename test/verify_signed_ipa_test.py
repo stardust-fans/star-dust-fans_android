@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+import io
 import importlib.util
 import json
 import plistlib
@@ -10,6 +11,7 @@ import tempfile
 import unittest
 import uuid
 import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
 
@@ -171,6 +173,27 @@ class SignedIpaVerificationTests(unittest.TestCase):
         self.assertEqual(result["version"], self.version)
         self.assertEqual(result["authorized_device_count"], 1)
         self.assertNotIn(self.device_id, json.dumps(result))
+
+    def test_sanitized_receipt_is_written_only_after_all_checks_pass(self):
+        destination = self.root / "receipt.json"
+        args = ["--status", str(self.status), "--signed-zip", str(self.output), "--source-artifact", str(self.source),
+                "--recipe-sha", self.recipe_sha, "--team-id", self.team, "--bundle-id", self.bundle,
+                "--openssl", OPENSSL, "--receipt-output", str(destination), "--quiet"]
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(VERIFY.main(args), 0)
+        self.assertEqual(output.getvalue(), "")
+        receipt = json.loads(destination.read_text(encoding="utf-8"))
+        self.assertEqual(receipt["verification"], "passed")
+        self.assertEqual(receipt["request_id"], self.request_id)
+        self.assertEqual(receipt["ipa_sha256"], hashlib.sha256(self.ipa).hexdigest())
+        self.assertNotIn(self.device_id, json.dumps(receipt))
+        self.assertNotIn("profile_uuid", receipt)
+        self.assertNotIn("team_id", receipt)
+        destination.unlink()
+        self.make_status(dict(self.report, bundle_id="other.bundle"))
+        self.assertEqual(VERIFY.main(args), 1)
+        self.assertFalse(destination.exists())
 
     def test_explicit_archive_parent_directories_are_allowed(self):
         result = self.run_check()
