@@ -1,76 +1,60 @@
 name: GitEdge Windows runtime verification controller
-
 on:
-  workflow_dispatch:
-
+  workflow_dispatch: {}
 permissions:
   contents: read
-
 jobs:
-  maintain-runner-workflows:
+  cleanup-completed-maintenance:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Commit fixed workflow and dispatch Windows verification
+      - name: Clean completed owned updaters and maintenance workflows
         env:
           GITEDGE_SIGNING_TOKEN: ${{ secrets.GITEDGE_SIGNING_TOKEN }}
         run: |
           node <<'NODE'
+          
+          const origin = 'https://gitedge.voidcarve.com';
           const repositoryId = '13814fa3-8580-4b5a-803e-a6b1206007ed';
-          const apiOrigin = 'https://gitedge.voidcarve.com';
+          const repository = '/api/git/repositories/' + repositoryId;
           const token = process.env.GITEDGE_SIGNING_TOKEN;
-          if (!token) throw new Error('The GitEdge API token is unavailable.');
-          const files = [{"path":".github/workflows/windows-broker-verify.yml","dispatch":true,"payload":"1f8b080000000000000ab55a6d6fe33612fe9e5f31580427bb0905db79e9ae8d5c379b64b7e9a59b20ceb60738ae414b239b1b9954492a2fd8e4bf1f484ab264cb76b6ed7d096072387c86331c3e330aa733ecc26f2859f404bf331e8a07056329ee50429a845423c8946b36c3ad2dc1bb5b000f42de45b17818854c255407d3eed6568272c69462822b231208ae916bd5058934dcdafa2ac676fcde6e439c7a3b0246bb22827761a0308ec854288de16e0e6517386248b41031e122c4fc379b2139980dad06f343a49acc184f35aa2e1cd861a531c9f60020c0cb868e859ee65666e62978607a2a520d418c94a749b612404d318ebb903ca869312653de85e7e227c0f69994421e079a097e253142893c403802afaf45e2952525de33735466b2b5dfdaa3340a7edc6b1d627418d2f06dd819776810d056303ec077ad71276aff38ae28c0c704038de195d1245265148d233c6cefd1f1782fd8a787631a1c0661d43e6cededbd451a8cc7c14118e0b8ddaa28525321f5f51c4e01cdefa763a525e393466b17da9d667995f1c315d553b3ed69f7f613d33fa76367b9ba359e52b74684dc77f6fd4ec76f9107c6c9e3e1be1df5f1112b18349513d4c686f78dd238c0fb6f702d849eef72164ef056a69ca3cc42c8eb415f538da74cd68b2933ebf5e08315bfa1eacec86542d756e643a1298d22f668e6db5e0f2ee3f08a8570046fdfbd3b38ecc1051d636c261f5c60122984266d0f5e76bf1735e9bc0eb795db88dc692bb077cad8dfbdddebbc5d85bde3c14b097a73abf4234ab9f5277c424d8ee5249d21d737e20eb96a0c5c600cb763c6b109df2ae66f338d33e3cc41ff49699cf927228ed1c586ff09394a16f8174ce95ccbb0dbe5f8d06856b44442220da6d0d89e9904038cc340e2041f87ddeeaf660455c36ebf0bde9bc6e08f37c31f9a6f9e1bb7fd9da6d75c8404c0a25c93ff498a345183f6d0efa741804a35e15b06da3f0ec365b1df689c62135e006385eb643b73d9caf6d55f12752a79aee5461c4b499f2ad6bfd4fae1069526cee1575218e08d81187fc5400fb71337b00b85678c7f4b3f55166b8b2763cf255bed7fa63304c211bce29a0211120817ba50d5ed9efd99d2b81404f9f2b3470c524dc7b14d0dbbf32cb10b83be953d11b3844aa6041f76bb9732649cc6e7132e249e5085c66dc5e944d41c76f5e4b6b50d3f38aa894958c673226633cac30b13a3cb463b5dfe8948b906126b38788dad6ed5a035fc3f986760bdcf81c133fc3e4589e4d2bad884dd0888bb0bde1f8d9f58b3f15397e03321784fe367923c139248c6f53391cf8448fc3365d24cb35922a47e26241634443367de0ec9ccd1d1381b35ca8e9eb79b1ebc34dd916cf4850a244b4c92fb45304eec6360830e3c37a3aa19cf9f7d555e9d86731ee223bae41f09098d6d0647d0eec136b36ea938ca8ceeec186ce6b036ba699b193fb97dbec74bdb0c5ee0a5b900d75ca17ab4ad7f0ead47b2cc1f32e9fd5dcc36d02bc79cc73b4768db78af98559e7d6500d89526d933ae87d5bd06ade1aa139c2f28edbe289fef5ede68c7c05e3c672094870b097ff3692fa83567af50dee3ab4fbd6edbb28d64a26bc0531e56a4fe498b2a5a6de86769ffb5266d7c844ce2bd928c072ca1719f857310a942791ed6be2f6e6a9ebdfae436245e29c072a6d0c720954c3ff9c516c5d079885cb388a1cce842b161edebda58a3f2f3cd711098535ed0d4f46f24e52aa61ad72daf41b4f2dcb47c5a6447b6006218da14b28af338466c484f4e8e97298dcbb6473038bff44dfa1d76bb9f507f4ce3d8fcca75f8868a366bd850fd4397f186c6352a11dfa3cbebe4826994342e257952aa75c094374dff7b9f423d95e2013ca36e94503df5163c69cba40059a2b34a63e9a13165e86d46a85da14ab215fe5725b8b7caea86a55275a695f6b3f3374f09c205d2a882d8498d6cb9cb27ab716744e5c495c2ebf6baa60ff00c2782dfa3d41fa598915f94e0cba7bcb8d10c95a2135363da8b965b9f0f13c6e17dc39b303d72e7338a288b31f476c143cbd698e023150b3d4a39bda72c36eccdccba531d65546ac46caceba7d2fa4c4253753792a834957a79369118c56c322d4f5591b8b76b11f89c6bf3348e970e7820648812c3e1fb6f90dd823cdc6da1d30393f86c555ca876233d90955ad7cde5633d48e6f574319b8ff52010b324468de1b12e0b94867b3077c9f6dc9ac2b73722f3acb920129502728a899ec29e217c92692497a94e525d57bf544d714c5db91ac611f52583acccbcdb5091294cb5328b0d85fa78b7197c39e02be8f051a3e434fe19a9d463a48e4f7809f2d0de960a887151dbf66de5d0c740f050d91771df31724714e6b68b24c130ab835868953b912c025ce95b833f0f66bc37e11ce0ea8bdb37d10c47d0189c528d376c869751a4b004635caec37c1bfdc6fd4dff467ce1ec1ea5a2b159d7584cbdb986933c66d66e538aaccdaacb5e70165806b2b421b1bc7579b86abed94fd3b8ea909a53559a8e59ccf453cd714e915afbfe0513a68104f046d108fd90490cb4904f473691bf017292a57489f724a15221fc7c767c0a9d7fbbfbff0c97a926ee6531af349bd51b7f71dcbf39fbeff9cdc9e5e9990d8c968b368ba372154a8698ec68046af08fcb9d1793cafbc114c334c6d08e11f3d716cd79ec955a359b72b7053cdfc0b7dd20ff46382b1b4d776b4c9bc7dc9a12de52e2ad3df238711a2db079c3c841fbe29ec9e85de7ddf8b07db81fe101f160a730c07591562bdd740e0bdb6f7cc09cfc398f449d663bfed7b5db239eaf5975c448c3272f0f941c8e7f419536abae51a5b1cb61ad92179ce40a2f988d1b8b54b9d4a128b97dce2bbfe42cd4f690ec86eb7494ec5aa563196e924baec8e125a5593777b124aceaa356a8260cdd84790497552ed67900dba6b19eb1bc86a34cb675631beea60f55c737fb229501be9ad9aea0c9c5793ac459130b9bbb2b79758eb5f917c8eeeb8eed584e3636b932b8f9bc5a7a671e244d129435bcb9e188b3486c8b865409b44d06d58f023be091584c2618d6a40a33eb27aaed2d01c8194566cdfb86473e8b0b3111860492cfe24a8a8839b6493e0b7ece0d390e34bb774367393fbd12310b9eccd887a7842a65673fba95b995b5afc1fc304b415c81356f75bdce3fb51d9f6585d5becf868ee21ca56b00151365bdd9d4df0db76a71ea6e9ea330594bcbde3d363be74a53f3edea77c6f73aa38ce62c5fc2e526e57293daf42d5ddc1581937ff778a9755b8168a957e5685e313f680dfd6c93f3320face76849851356eb9b9a9b98cd2c33c105002712a9390f33fd0af657567b8ab1a639bf3a82c1af2ed95c8b94878dfcd7f158351a55340b44cdffa2831c5c95b43577616f094150026c767d855ddf5d7d25f6d3d30a4f99126c8ede50db2f3a289553cea8e295f684d73475d9fc004a4bcac3eb96fc87718ba86cbc6f064b6ca00761d5212b9d55587032a7e7551b8a892aa87fac125c194686f1b757c6f9c8162a35d11e8be06eb9cbb2785f3d979e7d23fdfdcd95628fd59d15db7f1d19c135cd152b742182bbb5ed95f96e7fb5b7623464f1565ba31538bea7fcb31f025ce7bb589e54aad855e9cdf6ea8b3519bf722d00dbb57619b292354a169493844920e5005a481a4b3154f28a78e028977db239236495a0adc47a50a9abd615416661a9f45847e673d18caf1fad21f3a63d64bb08ee13f9cadec2c644b6989536a52455e9711c6d6c83f4a0f07806b51235a5e9e3826f2fc6484928fb6e6ebd2353ecc172abe6a8d4a8794db2da5f9face6ddee9d859058f381bcac0fbc0fe6ff7416fe2ba9f87f1dc30731845804348644289dd15808a618dc291fce320be1b46d6230b332103c6272669f029038a38c2b5098504935f6b27f7a92608a3b050f28d17c56a08c63e897f3de0b04f68bc6b71af836bb80570fdcfd17140b1c00d709f5ab19151f998676e5bbc2ff0062719042a8250000"}];
-          const dispatchedPaths = [".github/workflows/windows-broker-verify.yml"];
-          const { gunzipSync } = require('node:zlib');
-          const safeErrorCodes = new Set(['bad_request', 'conflict', 'feature_disabled', 'file_too_large', 'forbidden', 'insufficient_scope', 'internal_error', 'not_found', 'payload_too_large', 'protected_branch', 'refs_changed', 'repository_archived', 'run_limit', 'unauthorized']);
-          async function api(label, route, options = {}) {
-            let response;
-            try {
-              response = await fetch(apiOrigin + route, { ...options, headers: { Authorization: 'Bearer ' + token, ...(options.headers ?? {}) }, redirect: 'error', signal: AbortSignal.timeout(30_000) });
-            } catch {
-              throw new Error(label + ' failed (network or timeout).');
-            }
-            const result = await response.json().catch(() => null);
-            if (!response.ok) {
-              const code = safeErrorCodes.has(result?.error?.code) ? ' ' + result.error.code : '';
-              throw new Error(label + ' failed (HTTP ' + response.status + code + ').');
-            }
-            if (!result || !Object.hasOwn(result, 'data')) throw new Error(label + ' returned an invalid response.');
+          const workflowPath = ".github/workflows/windows-broker-final-cleanup.yml";
+          const removePaths = [".github/workflows/linux-arm64-host-readback.yml",".github/workflows/macos-broker-update.yml",".github/workflows/macos-broker-verify-cleanup.yml",".github/workflows/macos-signing-diagnostics.yml",".github/workflows/windows-broker-diagnostics.yml",".github/workflows/windows-broker-readback.yml",".github/workflows/windows-broker-stage.yml",".github/workflows/windows-broker-state-diagnostics.yml",".github/workflows/windows-broker-update.yml",".github/workflows/windows-broker-verify-cleanup.yml",".github/workflows/windows-broker-verify.yml",".github/workflows/windows-native-signing-log-probe.yml",".github/workflows/runner-label-routing-verification.yml",".github/workflows/windows-broker-final-cleanup.yml"];
+          const bytes = require('node:zlib').gunzipSync(Buffer.from('1f8b080000000000000abd5a6d6fdb3812fede5f31288c937d8d04db69b3ad0ddf364dd26ef6b24d1027bb07b8d98096c6361b99d492545ed0e4bf1f484a3265c92fe9f6ee4b1093c3e1bc71f8cc508cccb10707311206219f27312a8ce00fca227e27612cf80d0a4893882814f20567bd1700775cdc4c627e771d51991015ce7af0ede94582624ea5a49c494d1472a69029d90381247af1958fedb0de294df4bf002265d2e7ac072389f1c49f71a930dac977df018618f98af3d8673cc2fc379da3ff667e6538e81f3c55fe9cb254a1ecc11b332c1526d2ee01e003334afe8e824e1e329d24101681c039bf45e02c7e70b4e7770ca35c695044dec88c15809c611cf720b993b3624ca4ac078fc54f80c691105cec878a727626708202598830006fa878e2b994026fa9b6999e6cbf6eef1232097fda6defe1642f22d1dba83bee923024ed70fc06dfb5c7dd49e7a7718901de27182a8cce34279e4acd683cc1bdce2e198f77c3d7646f4cc2bd309a74f6dabbbb6f9184e371f8260a71dc699718c91917ea7c214e215a304cc75209caa6cdf60e74ba2d779576cc195133bded61efcb27aa7e49c75673f945bb4e7ed124fe6df775d0ed066dff8e32ff7eefb5190df01e4b322822a6a8b40eef9bce38c0fb6f70ceb95aec72144df18b481943e15b8f7a7d182aa2f0908a7a32a967bd3e7c30e41744de68ba8ce8dcd07c2838a59309bdd7f31daf0fa77174462318c0db77efdeecf5e1848c31d6937736527dc1b9f23b1e3ced3c576abfbb9ddc866ea3e4965b217bd795fddddbddeedb55b2773d787244775decfc3b4999f12c7c42e5ef8b693a47a62ef80d32d91cd910b96ac494610bbe950cd1a00ae7daada3e18354380f0e781ca38d92e0133214340c4ea8543997ab5e8fe15db355e232e1024938836663aeb30e5006238153bcbfeaf57ed323289b66fb1df05e36477fbebcfa67ebe563f3cbf055cb6b2d8b04402739a7e093e06922479dab609886214ad9826f99d0c17e1455c97e27718a2d78028c25aea3ed2e684bdb977f0954a96039970bbe2f04792869ffb4c1231728956f83e04c70ad4273c4c75f3154578dc40eec40e123ed73e7a7cce26fd946c642d9eae0339923f80cc12b8e2ef85c80cfb82a58f57a477fa52476c2215f7e748f61aac83836e96267913976603434b4077c9e1041256757bddea9882823f1f19471810744a2766061a709d1662fdbb0a14c20c2a0263aa12acf019fcf098b4e74b45695b6bc82039e32057eace0cd36bada55a3f6d5ff403d2dd6fb5c3078843f6628d03f352ed601780dbe3d15de9fcd9f69abf973cfc747dfc75b123ffac9a3ef278232f5e88b47df17f8574a859ea6f3840bf5e8fb312711ea397d9f08aa4d47e26c54331b3c365a1e3cb5ac4936fa428682263af1fdca29f3cd0561820e3c3b23cb5930987f955e1d876316e13dda0b61c205341b1406d0e943831ab7941ca5475fbdd2b269636d7453836a3fd97d9ee3a5068527786a2d89ab8f50bdb4ed1f27ade767b7414485f7776536815e32731eef0ca163e2bda4963bbb650098953aed53a6aeca7b8dda57ab2cb858e0ecbe4c9fefee6ef44a8bbd6c67f0098b9652ff666b2fb1d5b697286e716babd76debeae84f558df01a94ba543f52a3125713fa59dadf56a5675c473a059f09ca429a907848a38538a944711cd5de34766a91c786fe97c8f79c50cbd1c310c35450f510145b1443c711324527144506218a0d6b6fdce61a969f2ff6c350db7b89532bb81084c998285cb7bc46a22d2ca8c4c33276bad5750bc5c8a4955588c822670d8972105d053c36030f60747c1ae8947cd5eb7d42f5318d63fd2be71168c8daaac14af5975f86259ae728797c8b36d7fb2754a120b193f87da726025d06b582e75e8f6a26f81d789add7542d4cc5bf2a929a742a489ca2a92cae5a32bd72f19f0b6f59d9fad08be4acebc555a370dbcaa53cdd9cfcc5f3c240827482625892dd5b5a98fd974b5dc197839b0b5f3babdcec91d3cc20167b728d447c1e7feaf92b3aa9597379aa39464aa6b5173e472edf3619f3278dff4a6545d5bfb5c4f088d31f276c04383e02867d732e6ea3a65e496d058233a3d6bad7a9dc1ab6b6aa25e3d38eb330a5d4f5f0b948a08559d4d044e623a9db9536549ec7db62cf80289b3348e2b061e7111a1c0e8eafd37c84e411eeea620ea834e86a67a2e58db913e88524d6ce7f2b13e248bbabb98cdc7fa8ba6c2be72099ce13e2c5cd2586853f8f682679ed50744a094e01f62a266b0ab41a0a00afdd35425a9aaab6ecaaa58f42e6d8563c17b452143b3e84a94680a550dcd72e3a13ede4d2eaf067c493abc572818897f4122d41889c5185e822c32a7a524c4b8a88187a69a1862c85924cd2df9daa2740b1e16baf324c128ab8d6864985b922c026c895c237f1ecc78abc339c4d50777a8a31906d01c1d128517748ea7938944478cb15b9b0526fab5fb5bc105bf64f4168524b15ed75c4ebd398783a23fb56e1b27b236b376bd603530a8a4b2a16fb06c75b8acbede4f91b8ec901aab4a45c634a6eaa1c69c332446bf7fc0942af0437829c90483880a0c15170f0393c85f827f90a57481b77e428444f8e568ff10baffb2e7ff114e53e5db9b45dfd7745eaffcc9fef0e2e83fc71707a787472630da36da8c1ca5a3e028a2b3a326a8917fec7668742a1f86338cd2182333e6ebbfa690ce63cf69e96ccadd46e0c50681e91a0517dc6ad96cd953a3db41fad438f23a89b7d6e47162391ac1168d252bdaa5bd2627efbaefc67b9dbdd7137ce37bf0aa50c0769b5633dd6487a5ed375e6096fe984d781d6733fefddc8d89176b56991849f4e0e581928b139c10a9f4aa7394696c7358dbf182a55ce105bd717319343b5d0bc7ed0b847999e351d361321baee3e1e8b58a4755dc24a75c91c31da659d777b94c2cf32386a8260ced84be04ab2c976b3f80866ec06728af69219369e798c6bcee4dd5e1cd214f45885b23db1530b9b0a795386b6c616b6725aece656d7d07d8ddce6cfb62bab1f195899bcfcbca3d73274892a0a8c1cd4d0b9c7962da367e19409b64507e3c78059e1ff3e914a39a54a167834476bc8a0039a2c8b479dff4fccffc844fb90681fe677e26f8845ab4e97fe6ec9869701c2a7a6b878e727c7ac6631a3ee8b10f0f0991d2cc7eb42b732d6b6f8385319d202e89b5687f6de79fda2e509561b917b4a1cbb890d236858a09976f36f577c36d55996acfa0053359c3cb9c423a3f665211fddaf50765bbddeb0cf0548f63b585596d61ebaea68dc02284f29792a75a071612553a5916f015f3a3f655906d72ec22c27ab49694d061b9d2a93993d94c15132e09702090687be8e92d70a0cbf610634572a43580d16f36ed9cf39445cdfcd7fe58369b656996205b70a9c25cb8327c6bedc06e4582d01158efba855ecfaec312f358b5c253ba185b48af41eea50a9dc2ca2a55dcd71ef75aba425b18c059e20eaf5bf26fca8c44aef2811e7470411fa2b243563aabd0e06001d4cb3a141365a17e584db8328c34f6efac8cf36b53b2d4447bccc39b6abf65f9bc7a3651079afaf96d96628fd53d16d39dbdd6846bda2c86e88487376b1b2d8bddbeb7cba23964f1565bad15723ca71034cf04b62f5e2c4f4af5ecaaf4663af9c59a0c69d96680e969db0c59ca1a8e066e92d009c40da0a5a4518921c72bfaab0a51f5c9e68c90d584a626eb43a9c25a570ee9854e11b20ed6e7a419721fac81f5ba5164fa09f6517d65976163225bce4a9b52922c753b061b1b227d283c9e895a8a1a677abf40decb31e21065efebc63b22c53e549b3603a765b34db27abd3e592dfadeaf964262cd43bacb0fbc0f5ccd96bf651229d31f0d49d0c810238879486248b85419a0857086e18d0ce028d3100e3b3a06332d43ce2654cccd55a0bf1f2294499098104114f6cb5f0dc11d0ad44f0d84328c0237ef3d41685e39bed5886fb20b78f58283354b6805b03dd1a09c51f19e2ae86cf15af38cd783ec44fc88f640436ddd16d890691bf4596d800ddcecc3ff76653fdda2e0bfcc42814ad0975bde990b9673607de1e53cc6fc5fea2ff3ed4966cb63fd6ff94ecc65dcc2849a5170363c96fa76d5912fb206a299d8574ad0b1fe580ffcb1aed875d5ac8bb3c58406b2689a7a679c32e5def2972c2f728a9396495631eb251338a552a1d81c6507f650f7b2b7ecf54a9e9b8f06bfdf48ce8da72fbcc1d27597e965034bef140db2949bb15f1a5de4ff41f3791dc75625d0d7a5ed55f9e4bf57d8860e422a0000', 'hex'));
+          async function api(route, options={}) {
+            const response = await fetch(origin + route, {...options, headers:{Authorization:'Bearer '+token,...options.headers}, redirect:'error', signal:AbortSignal.timeout(30000)});
+            const result = await response.json().catch(()=>null);
+            if (!response.ok || !result || !Object.hasOwn(result,'data')) throw new Error('Fixed cleanup API failed.');
             return result.data;
           }
-          (async () => {
-            try {
-              const repository = '/api/git/repositories/' + repositoryId;
-              const branch = await api('Read main revision', repository + '/files?ref=main');
-              if (typeof branch.oid !== 'string' || !/^[a-f0-9]{40}$/.test(branch.oid)) throw new Error('GitEdge returned an invalid main revision.');
-              const currentFiles = await Promise.all(files.map((file) => api('Read existing fixed workflow', repository + '/file?ref=main&path=' + encodeURIComponent(file.path))));
-              if (currentFiles.some((current, index) => current.path !== files[index].path || typeof current.content !== 'string')) throw new Error('GitEdge returned an invalid workflow file.');
-              const payloads = files.map((file) => gunzipSync(Buffer.from(file.payload, 'hex')));
-              let expectedOid = branch.oid;
-              if (currentFiles.some((current, index) => current.content !== payloads[index].toString('utf8'))) {
-                const form = new FormData();
-                const changes = files.map((file, index) => ({ op: 'put', path: file.path, part: 'file' + index }));
-                form.set('manifest', JSON.stringify({ branch: 'main', expectedOid: branch.oid, message: 'Inspect Windows broker process timestamps [skip ci]', changes }));
-                files.forEach((file, index) => form.set('file' + index, new Blob([payloads[index]], { type: 'text/yaml' }), file.path.split('/').at(-1)));
-                const committed = await api('Commit runner maintenance workflows', repository + '/commit', { method: 'POST', body: form });
-                if (committed.branch !== 'main' || typeof committed.oid !== 'string' || !/^[a-f0-9]{40}$/.test(committed.oid)) throw new Error('GitEdge returned an invalid commit result.');
-                expectedOid = committed.oid;
+          async function commit(changes, message, fileBytes) {
+            const head = await api(repository+'/files?ref=main');
+            if (!/^[a-f0-9]{40}$/.test(head.oid)) throw new Error('Invalid branch revision.');
+            const form = new FormData();
+            form.set('manifest',JSON.stringify({branch:'main',expectedOid:head.oid,message,changes}));
+            if (fileBytes) form.set('cleanup',new Blob([fileBytes],{type:'text/yaml'}),'windows-broker-final-cleanup.yml');
+            const result = await api(repository+'/commit',{method:'POST',body:form});
+            if (result.branch!=='main'||!/^[a-f0-9]{40}$/.test(result.oid)) throw new Error('Invalid commit result.');
+            return result.oid;
+          }
+          (async()=>{
+            if (!token) throw new Error('Missing scoped token.');
+            const expectedOid = await commit([{op:'put',path:workflowPath,part:'cleanup'}],'Prepare completed updater cleanup',bytes);
+            const run = await api('/api/actions/repositories/'+repositoryId+'/runs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workflowPath,ref:'main',expectedOid})});
+            if (!/^[a-f0-9-]{36}$/.test(run.id)) throw new Error('Invalid run identity.');
+            console.log('Cleanup run: '+run.id);
+            let succeeded=false;
+            for (let i=0;i<60;i++) {
+              const current = await api('/api/actions/runs/'+run.id);
+              if (current.status==='completed') {
+                if (current.conclusion!=='success') throw new Error('Owned updater cleanup failed.');
+                succeeded=true; break;
               }
-              const actions = '/api/actions/repositories/' + repositoryId + '/runs';
-              const runs = [];
-              for (const workflowPath of dispatchedPaths) {
-                const queued = await api('Dispatch ' + workflowPath, actions, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflowPath, ref: 'main', expectedOid }) });
-                if (typeof queued.id !== 'string' || !/^[A-Za-z0-9._-]{1,128}$/.test(queued.id)) throw new Error('GitEdge returned an invalid workflow run ID.');
-                runs.push({ workflowPath, runId: queued.id });
-                console.log('Queued ' + workflowPath + ': ' + queued.id);
-              }
-              console.log(JSON.stringify({ repositoryId, commitOid: expectedOid, runs }));
-            } catch (error) {
-              const permittedLabel = /^(Read main revision|Read existing fixed workflow|Commit runner maintenance workflows|Dispatch \.github\/workflows\/windows-broker-verify\.yml) (failed \(HTTP \d{3}(?: [a-z_]+)?\)\.|failed \(network or timeout\)\.|returned an invalid response\.)$/;
-              const message = error instanceof Error && permittedLabel.test(error.message) ? error.message : 'Maintenance controller failed.';
-              console.error(message);
-              process.exitCode = 1;
+              await new Promise(r=>setTimeout(r,10000));
             }
-          })().catch(() => { console.error('Maintenance controller failed.'); process.exitCode = 1; });
+            if (!succeeded) throw new Error('Cleanup still pending; no workflows removed.');
+            const oid=await commit(removePaths.map(path=>({op:'delete',path})),'Remove completed signing maintenance workflows');
+            console.log(JSON.stringify({cleanupRun:run.id,conclusion:'success',removedWorkflows:removePaths.length,commit:oid}));
+          })().catch(()=>{console.error('Fixed completed-updater cleanup failed.');process.exitCode=1;});
+          
           NODE
