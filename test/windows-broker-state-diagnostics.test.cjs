@@ -18,6 +18,14 @@ test('fixed Windows diagnostics are read-only and redact host process arguments'
   assert.match(source, /token\|secret\|password\|authorization\|cookie\|credential/);
   assert.match(source, /\$redactNextArg = \$token -notmatch/);
   assert.match(source, /Get-LogFlags/);
+  assert.match(source, /startRelationToUpdateReceipt/);
+  assert.match(source, /updaterLogs/);
+  assert.match(source, /usesWaitSwitch/);
+  assert.match(source, /usesPassThru/);
+  assert.match(source, /envFileBasenames/);
+  assert.match(source, /logBasenames/);
+  assert.match(source, /scriptPathMatchesExpected/);
+  assert.doesNotMatch(source, /brokerRuntimeProcess = .*argv/);
   assert.doesNotMatch(source, /Unregister-ScheduledTask|Stop-ScheduledTask|Start-ScheduledTask|Restart-Service|Stop-Process|Remove-Item|Set-ItemProperty/);
   assert.doesNotMatch(source, /Write-Output.*\$receipt\.message|Write-Output.*\$process\.CommandLine/);
 });

@@ -83,6 +83,8 @@ foreach ($target in $targets) {
     brokerTask = $null
     updaterTask = $null
     brokerProcesses = $null
+    brokerRuntimeProcess = $null
+    launcherScript = $null
     serviceLogs = $null
   }
   $receiptPath = Join-Path $target.Root 'work\broker-update-receipt.json'
@@ -126,6 +128,30 @@ foreach ($target in $targets) {
       currentUserMatchesPrincipal = ($currentSid -eq $brokerSid)
       actions = $actions
     }
+    $expectedLauncher = if ($target.Suffix -eq '1') { 'D:\GitEdge\start-broker.ps1' } else { 'D:\GitEdge\start-broker-2.ps1' }
+    $launcherArgument = [regex]::Match([string]$broker.Actions[0].Arguments, '(?i)-File\s+"?([^"\s]+\.ps1)')
+    $launcherPath = if ($launcherArgument.Success) { $launcherArgument.Groups[1].Value } else { $null }
+    if ($launcherPath -and [string]::Equals($launcherPath, $expectedLauncher, [StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
+      $launcherText = Get-Content -LiteralPath $launcherPath -Raw -ErrorAction Stop
+      $report.launcherScript = [ordered]@{
+        path = $launcherPath
+        fileExists = $true
+        startProcessCalls = [regex]::Matches($launcherText, '(?i)\bStart-Process\b').Count
+        containsBrokerEntrypoint = $launcherText -match '(?i)runner-broker\.mjs'
+        redirectsStdout = $launcherText -match '(?i)RedirectStandardOutput|StandardOutPath'
+        redirectsStderr = $launcherText -match '(?i)RedirectStandardError|StandardErrorPath'
+        waitsForChild = $launcherText -match '(?i)WaitForExit|Wait-Process|HasExited'
+        usesWaitSwitch = $launcherText -match '(?i)\s-Wait(?:\s|$)'
+        usesPassThru = $launcherText -match '(?i)\s-PassThru(?:\s|$)'
+        checksChildExitCode = $launcherText -match '(?i)ExitCode|\$LASTEXITCODE|service did not start'
+        envFileSourceCategory = if ($launcherText -match '(?i)\.env(?:\b|\.)|dotenv') { 'env_file' } elseif ($launcherText -match '(?i)\$env:') { 'process_environment' } else { 'none_detected' }
+        envFileBasenames = @([regex]::Matches($launcherText, '(?i)[A-Za-z0-9._-]+\.env(?:\.[A-Za-z0-9._-]+)?') | ForEach-Object { [IO.Path]::GetFileName($_.Value) } | Select-Object -Unique)
+        logBasenames = @([regex]::Matches($launcherText, '(?i)[A-Za-z0-9._-]+\.(?:out|err)\.log') | ForEach-Object { $_.Value } | Select-Object -Unique)
+        nodeExecutableLiteralPath = if ($launcherText -match '(?i)([A-Z]:\\[^''"\s;]*node\.exe)') { $Matches[1] } else { $null }
+      }
+    } else {
+      $report.launcherScript = [ordered]@{ path = $expectedLauncher; fileExists = $false; actionMatchesExpected = [string]::Equals($launcherPath, $expectedLauncher, [StringComparison]::OrdinalIgnoreCase) }
+    }
   } catch { $report.brokerTask = [ordered]@{ available = $false; category = 'task_query_failed' } }
 
   try {
@@ -161,12 +187,38 @@ foreach ($target in $targets) {
       $categoryCounts[$category]++
     }
     $report.brokerProcesses = [ordered]@{ count = $processes.Count; imageCounts = $counts; commandCategoryCounts = $categoryCounts }
+    $runtimeProcesses = @($processes | Where-Object { [string]$_.CommandLine -match '(?i)runner-broker\.mjs' -and ([string]$_.Name -match '(?i)^node(?:\.exe)?$') })
+    $expectedBrokerScript = Join-Path $target.Root 'scripts\runner-broker.mjs'
+    $report.brokerRuntimeProcess = @($runtimeProcesses | ForEach-Object {
+      $scriptMatch = [regex]::Match([string]$_.CommandLine, '(?i)"([^"\r\n]*runner-broker\.mjs)"|([A-Z]:\\[^\s"\r\n]*runner-broker\.mjs)')
+      $scriptPath = if ($scriptMatch.Groups[1].Success) { $scriptMatch.Groups[1].Value } elseif ($scriptMatch.Groups[2].Success) { $scriptMatch.Groups[2].Value } else { $null }
+      $startedAt = try { ([datetime]$_.CreationDate).ToUniversalTime().ToString('o') } catch { $null }
+      $receiptTime = try { [datetime]::Parse([string]$receipt.completedAt).ToUniversalTime() } catch { $null }
+      $startRelation = if ($null -eq $receiptTime -or $null -eq $startedAt) { 'unknown' } elseif ([datetime]$startedAt -lt $receiptTime) { 'before_update_receipt' } else { 'at_or_after_update_receipt' }
+      [ordered]@{
+        processId = $_.ProcessId
+        startedAtUtc = $startedAt
+        startRelationToUpdateReceipt = $startRelation
+        image = $_.Name
+        executablePath = $_.ExecutablePath
+        expectedScriptPath = $expectedBrokerScript
+        scriptPathMatchesExpected = [string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)
+        scriptPath = if ([string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)) { $scriptPath } else { $null }
+        hasServeArgument = [string]$_.CommandLine -match '(?i)(?:^|\s)serve(?:\s|$)'
+        hasStateDirectoryArgument = [string]$_.CommandLine -match '(?i)(?:^|\s)--state-dir(?:\s|$)'
+      }
+    })
   } catch { $report.brokerProcesses = [ordered]@{ available = $false; category = 'process_query_failed' } }
 
   $logDir = Join-Path $target.Root 'work\logs'
+  $opsDir = Join-Path $target.Root 'work\ops'
   $report.serviceLogs = [ordered]@{
     stdout = Get-LogFlags (Join-Path $logDir 'runner-broker.out.log')
     stderr = Get-LogFlags (Join-Path $logDir 'runner-broker.err.log')
+  }
+  $report.updaterLogs = [ordered]@{
+    stdout = Get-LogFlags (Join-Path $opsDir ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.out.log'))
+    stderr = Get-LogFlags (Join-Path $opsDir ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.err.log'))
   }
   $reports += [pscustomobject]$report
 }

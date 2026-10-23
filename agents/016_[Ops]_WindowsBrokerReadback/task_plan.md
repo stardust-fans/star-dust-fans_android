@@ -6,4 +6,5 @@
 - [x] Submit the fixed readback payload/controller for review, then dispatch the readback workflow once.
 - [x] Record the readback failure without cleaning up either updater task or changing broker state.
 - [x] Prepare a fixed, read-only two-root diagnostics workflow covering receipt, checkout, task action/state, process counts, and service log categories.
-- [ ] Submit the diagnostics payload/controller for review and run it once to establish the second Windows broker's actual state.
+- [x] Submit the diagnostics payload/controller and run it once to establish the second Windows broker's actual state.
+- [ ] Read-only inspect both fixed launcher scripts and compare broker process start times with update receipts; retrieve only fixed runtime/log flags before proposing recovery.

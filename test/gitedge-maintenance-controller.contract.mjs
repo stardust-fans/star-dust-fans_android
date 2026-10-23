@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "4f139072723a054af7c3bbd04853fe242b9a777156290444fca22a214eea36dd",
+  "5333099c54dec139107f354ba327730ffb8c883679623ef45f6846dcae857135",
 ]);
 const windowsDiagnostics = payloadBytes[0].toString("utf8");
 assert.match(windowsDiagnostics, /safe\.directory=\$\(\$target\.Root\)/);
@@ -42,6 +42,13 @@ assert.match(windowsDiagnostics, /lastTaskResult = \$brokerInfo\.LastTaskResult/
 assert.match(windowsDiagnostics, /commandCategoryCounts/);
 assert.match(windowsDiagnostics, /Get-LogFlags/);
 assert.match(windowsDiagnostics, /Get-SafeArgv/);
+assert.match(windowsDiagnostics, /startRelationToUpdateReceipt/);
+assert.match(windowsDiagnostics, /processId = \$_.ProcessId/);
+assert.match(windowsDiagnostics, /envFileBasenames/);
+assert.match(windowsDiagnostics, /usesWaitSwitch/);
+assert.match(windowsDiagnostics, /usesPassThru/);
+assert.match(windowsDiagnostics, /brokerRuntimeProcess =/);
+assert.doesNotMatch(windowsDiagnostics, /brokerRuntimeProcess[^\n]*argv/);
 assert.doesNotMatch(windowsDiagnostics, /Unregister-ScheduledTask|Stop-ScheduledTask|Start-ScheduledTask|Restart-Service|Stop-Process/);
 assert.doesNotMatch(windowsDiagnostics, /Write-Output.*\$receipt\.message|Write-Output.*\$process\.CommandLine/);
 assert.doesNotMatch(windowsDiagnostics, /secrets\.|GITHUB_TOKEN|GITEDGE_SIGNING_TOKEN/);
