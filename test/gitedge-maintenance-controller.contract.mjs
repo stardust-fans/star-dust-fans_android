@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "5333099c54dec139107f354ba327730ffb8c883679623ef45f6846dcae857135",
+  "25392bbc7043cfc5a580cafbaaa48290ac52b7cf8d9c35648bfe5a22996b4b9a",
 ]);
 const windowsDiagnostics = payloadBytes[0].toString("utf8");
 assert.match(windowsDiagnostics, /safe\.directory=\$\(\$target\.Root\)/);
@@ -43,6 +43,14 @@ assert.match(windowsDiagnostics, /commandCategoryCounts/);
 assert.match(windowsDiagnostics, /Get-LogFlags/);
 assert.match(windowsDiagnostics, /Get-SafeArgv/);
 assert.match(windowsDiagnostics, /startRelationToUpdateReceipt/);
+assert.match(windowsDiagnostics, /\[datetimeoffset\]::Parse/);
+assert.match(windowsDiagnostics, /singleton_lock/);
+assert.match(windowsDiagnostics, /port_conflict/);
+assert.match(windowsDiagnostics, /unclassified/);
+assert.match(windowsDiagnostics, /stateDirectoryIdentityMatchesKnownProcess/);
+assert.match(windowsDiagnostics, /stateDirectoryUniqueAcrossRoots/);
+assert.match(windowsDiagnostics, /D:\\GitEdge\\/);
+assert.match(windowsDiagnostics, /argv\.Count -eq 5/);
 assert.match(windowsDiagnostics, /processId = \$_.ProcessId/);
 assert.match(windowsDiagnostics, /envFileBasenames/);
 assert.match(windowsDiagnostics, /usesWaitSwitch/);

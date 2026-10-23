@@ -19,7 +19,11 @@ test('fixed Windows diagnostics are read-only and redact host process arguments'
   assert.match(source, /\$redactNextArg = \$token -notmatch/);
   assert.match(source, /Get-LogFlags/);
   assert.match(source, /startRelationToUpdateReceipt/);
+  assert.match(source, /\[datetimeoffset\]::Parse/);
   assert.match(source, /updaterLogs/);
+  assert.match(source, /singleton_lock = 0/);
+  assert.match(source, /port_conflict = 0/);
+  assert.match(source, /unclassified = 0/);
   assert.match(source, /usesWaitSwitch/);
   assert.match(source, /usesPassThru/);
   assert.match(source, /envFileBasenames/);
@@ -28,4 +32,16 @@ test('fixed Windows diagnostics are read-only and redact host process arguments'
   assert.doesNotMatch(source, /brokerRuntimeProcess = .*argv/);
   assert.doesNotMatch(source, /Unregister-ScheduledTask|Stop-ScheduledTask|Start-ScheduledTask|Restart-Service|Stop-Process|Remove-Item|Set-ItemProperty/);
   assert.doesNotMatch(source, /Write-Output.*\$receipt\.message|Write-Output.*\$process\.CommandLine/);
+});
+
+test('only the previously observed exact broker process exposes its state directory', () => {
+  const source = fs.readFileSync(path.join(taskPath, 'windows-broker-state-diagnostics.ps1'), 'utf8');
+  assert.match(source, /processId = 97244; startedAtUtc = '2026-10-22T18:07:22\.2329430Z'/);
+  assert.match(source, /processId = 98104; startedAtUtc = '2026-10-22T18:07:33\.1104330Z'/);
+  assert.match(source, /stateDirectoryIdentityMatchesKnownProcess = \$exactIdentity -and \$validArgv/);
+  assert.match(source, /stateDirectory = \$stateDirectory/);
+  assert.match(source, /stateDirectoryUniqueAcrossRoots/);
+  assert.match(source, /StartsWith\('D:\\GitEdge\\'/);
+  assert.match(source, /argv\.Count -eq 5/);
+  assert.doesNotMatch(source, /Write-Output.*CommandLine|argv = \$argv/);
 });

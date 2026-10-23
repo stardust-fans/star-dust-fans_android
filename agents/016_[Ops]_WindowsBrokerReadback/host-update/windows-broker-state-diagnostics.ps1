@@ -9,7 +9,11 @@ $targets = @(
 function Get-MessageCategory([string]$Text) {
   if ($Text -match '(?i)(dubious ownership|safe\.directory)') { return 'git_trust' }
   if ($Text -match '(?i)(cannot find module|module not found|err_module_not_found)') { return 'module_missing' }
+  if ($Text -match '(?i)(already running|another instance|singleton|lock.*already exists)') { return 'singleton_lock' }
+  if ($Text -match '(?i)(eaddrinuse|address.*already in use|port.*in use)') { return 'port_conflict' }
   if ($Text -match '(?i)(process.*crash|application error|faulting application)') { return 'process_crash' }
+  if ($Text -match '(?i)(start-process.*failed|failed to spawn|could not start process)') { return 'process_launch_failed' }
+  if ($Text -match '(?i)(exited with code [1-9]|non-zero exit code|exit code [1-9])') { return 'process_exit_nonzero' }
   if ($Text -match '(?i)(active\.lock|lease|lock.*held|did not become idle)') { return 'lease_lock_error' }
   if ($Text -match '(?i)(enoent|no such file or directory)') { return 'enoent' }
   if ($Text -match '(?i)(access is denied|permission denied|unauthorizedaccess)') { return 'permission' }
@@ -64,12 +68,14 @@ function Get-SafeArgv([string]$Arguments) {
 
 function Get-LogFlags([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return [ordered]@{ present = $false } }
-  $counts = [ordered]@{ git_trust = 0; module_missing = 0; process_crash = 0; lease_lock_error = 0; enoent = 0; permission = 0; service_start_failed = 0 }
-  foreach ($line in (Get-Content -LiteralPath $Path -Tail 200 -ErrorAction SilentlyContinue)) {
+  $counts = [ordered]@{ git_trust = 0; module_missing = 0; singleton_lock = 0; port_conflict = 0; process_crash = 0; process_launch_failed = 0; process_exit_nonzero = 0; lease_lock_error = 0; enoent = 0; permission = 0; service_start_failed = 0; unclassified = 0 }
+  $lines = @(Get-Content -LiteralPath $Path -Tail 200 -ErrorAction SilentlyContinue)
+  foreach ($line in $lines) {
     $category = Get-MessageCategory ([string]$line)
     if ($counts.Contains($category)) { $counts[$category]++ }
+    elseif (-not [string]::IsNullOrWhiteSpace([string]$line)) { $counts.unclassified++ }
   }
-  return [ordered]@{ present = $true; categoryCounts = $counts }
+  return [ordered]@{ present = $true; nonEmpty = ($lines.Count -gt 0); lineCount = $lines.Count; categoryCounts = $counts }
 }
 
 $reports = @()
@@ -189,12 +195,31 @@ foreach ($target in $targets) {
     $report.brokerProcesses = [ordered]@{ count = $processes.Count; imageCounts = $counts; commandCategoryCounts = $categoryCounts }
     $runtimeProcesses = @($processes | Where-Object { [string]$_.CommandLine -match '(?i)runner-broker\.mjs' -and ([string]$_.Name -match '(?i)^node(?:\.exe)?$') })
     $expectedBrokerScript = Join-Path $target.Root 'scripts\runner-broker.mjs'
+    $expectedRuntime = if ($target.Suffix -eq '1') {
+      [ordered]@{ processId = 97244; startedAtUtc = '2026-10-22T18:07:22.2329430Z' }
+    } else {
+      [ordered]@{ processId = 98104; startedAtUtc = '2026-10-22T18:07:33.1104330Z' }
+    }
     $report.brokerRuntimeProcess = @($runtimeProcesses | ForEach-Object {
-      $scriptMatch = [regex]::Match([string]$_.CommandLine, '(?i)"([^"\r\n]*runner-broker\.mjs)"|([A-Z]:\\[^\s"\r\n]*runner-broker\.mjs)')
-      $scriptPath = if ($scriptMatch.Groups[1].Success) { $scriptMatch.Groups[1].Value } elseif ($scriptMatch.Groups[2].Success) { $scriptMatch.Groups[2].Value } else { $null }
+      $argv = @(Get-SafeArgv ([string]$_.CommandLine))
+      $scriptPath = if ($argv.Count -gt 1) { [string]$argv[1] } else { $null }
       $startedAt = try { ([datetime]$_.CreationDate).ToUniversalTime().ToString('o') } catch { $null }
-      $receiptTime = try { [datetime]::Parse([string]$receipt.completedAt).ToUniversalTime() } catch { $null }
-      $startRelation = if ($null -eq $receiptTime -or $null -eq $startedAt) { 'unknown' } elseif ([datetime]$startedAt -lt $receiptTime) { 'before_update_receipt' } else { 'at_or_after_update_receipt' }
+      $startedAtUtc = try { [datetimeoffset]::Parse([string]$startedAt).UtcDateTime } catch { $null }
+      $receiptTime = try { [datetimeoffset]::Parse([string]$receipt.completedAt).UtcDateTime } catch { $null }
+      $startRelation = if ($null -eq $receiptTime -or $null -eq $startedAtUtc) { 'unknown' } elseif ($startedAtUtc -lt $receiptTime) { 'before_update_receipt' } else { 'at_or_after_update_receipt' }
+      $expectedTime = [datetimeoffset]::Parse([string]$expectedRuntime.startedAtUtc).UtcDateTime
+      $exactIdentity = $_.ProcessId -eq $expectedRuntime.processId -and $startedAtUtc -eq $expectedTime
+      $validArgv = $argv.Count -eq 5 -and
+        [string]::Equals([IO.Path]::GetFileName([string]$argv[0]), 'node.exe', [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals([string]$argv[2], 'serve', [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals([string]$argv[3], '--state-dir', [StringComparison]::OrdinalIgnoreCase)
+      $stateArgument = if ($validArgv) { [string]$argv[4] } else { $null }
+      $stateSegments = if ($stateArgument) { @($stateArgument -split '[\\/]') } else { @() }
+      $safeStatePath = $stateArgument -and [IO.Path]::IsPathRooted($stateArgument) -and
+        $stateArgument.StartsWith('D:\GitEdge\', [StringComparison]::OrdinalIgnoreCase) -and
+        $stateSegments -notcontains '..'
+      $stateDirectory = if ($validArgv -and $exactIdentity -and $safeStatePath) { [IO.Path]::GetFullPath($stateArgument) } else { $null }
       [ordered]@{
         processId = $_.ProcessId
         startedAtUtc = $startedAt
@@ -204,8 +229,10 @@ foreach ($target in $targets) {
         expectedScriptPath = $expectedBrokerScript
         scriptPathMatchesExpected = [string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)
         scriptPath = if ([string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)) { $scriptPath } else { $null }
-        hasServeArgument = [string]$_.CommandLine -match '(?i)(?:^|\s)serve(?:\s|$)'
-        hasStateDirectoryArgument = [string]$_.CommandLine -match '(?i)(?:^|\s)--state-dir(?:\s|$)'
+        hasServeArgument = $validArgv
+        stateDirectoryIdentityMatchesKnownProcess = $exactIdentity -and $validArgv
+        stateDirectory = $stateDirectory
+        stateDirectoryUniqueAcrossRoots = $false
       }
     })
   } catch { $report.brokerProcesses = [ordered]@{ available = $false; category = 'process_query_failed' } }
@@ -221,5 +248,12 @@ foreach ($target in $targets) {
     stderr = Get-LogFlags (Join-Path $opsDir ('broker-update-' + $shortRevision + '-logged-' + $target.Suffix + '.err.log'))
   }
   $reports += [pscustomobject]$report
+}
+$runtimeStateDirectories = @($reports | ForEach-Object { @($_.brokerRuntimeProcess) | Where-Object { $_.stateDirectory } | ForEach-Object { [string]$_.stateDirectory } })
+$stateDirectoriesAreDistinct = $runtimeStateDirectories.Count -eq 2 -and $runtimeStateDirectories[0] -ne $runtimeStateDirectories[1]
+foreach ($report in $reports) {
+  foreach ($runtime in @($report.brokerRuntimeProcess)) {
+    if ($runtime.stateDirectory) { $runtime['stateDirectoryUniqueAcrossRoots'] = $stateDirectoriesAreDistinct }
+  }
 }
 $reports | ConvertTo-Json -Depth 8
