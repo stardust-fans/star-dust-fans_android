@@ -18,3 +18,4 @@
 | 013 | [Ops] GitEdgeiOSSigning | 将 iOS 签名请求迁移到 GitEdge 原生来源工件合同 | 完成旧签名执行器退役准备 | 🔄 进行中 |
 | 014 | [Ops] GitEdgeMaintenanceController | 在正确 Android 仓库中安装固定的一次性主机维护 controller | 使用授权的 Runner API 凭据执行主机验收 | 🔄 进行中 |
 | 015 | [Feature] CompleteGitEdgeIOSSigningWorkflow | 等待 GitEdge iOS 签名完成，下载并验证 IPA 后发布验收产物 | 让自动签名链路以本地既有验证器验收并输出可安装产物 | 🔄 进行中 |
+| 016 | [Ops] LinuxRunnerReadbackAndWindowsBrokerUpdate | 只读核验 ARM64 broker，并以空闲锁更新 Windows broker 到最终 SDK | 完成 GitEdge broker 更新和主机证据验收 | 🔄 进行中 |
