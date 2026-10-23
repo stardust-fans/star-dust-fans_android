@@ -28,25 +28,20 @@ const filesMatch = source.match(/const files = (\[[^\n]+\]);/);
 assert.ok(filesMatch, "fixed payload list must be inline JSON");
 const files = JSON.parse(filesMatch[1]);
 assert.deepEqual(files.map((file) => file.path), [
-  ".github/workflows/windows-broker-stage.yml",
+  ".github/workflows/windows-broker-readback.yml",
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "bc3edbc92bf4eaf6b0f4f9736283c46aba7f3de16277dc9c74fbf26766f779bf",
+  "b404250d632d9dfa955388f9dbe42b688fa8a8d41ba7f6c670018fdcdbc96b0b",
 ]);
-const windowsStage = payloadBytes[0].toString("utf8");
-const helperMatch = windowsStage.match(/\$helperBase64 = '([A-Za-z0-9+/=]+)'/);
-assert.ok(helperMatch, "the reviewed helper must be embedded in the fixed stage workflow");
-const windowsHelper = Buffer.from(helperMatch[1], "base64").toString("utf8");
-assert.match(windowsStage, /GitEdgeBrokerUpdate-' \+ \$previousShortRevision \+ '-/);
-assert.match(windowsStage, /LastTaskResult -ne 1/);
-assert.match(windowsStage, /Get-PrincipalSid/);
-assert.match(windowsStage, /Updater task arguments do not match/);
-assert.match(windowsStage, /run-broker-update-.*-logged-/);
-assert.match(windowsHelper, /Stop-ScheduledTask/);
-assert.match(windowsHelper, /active\.lock/);
-assert.match(windowsHelper, /brokerRunningSeconds/);
-assert.doesNotMatch(windowsHelper, /taskkill|Stop-Process -Force/);
+const windowsReadback = payloadBytes[0].toString("utf8");
+assert.match(windowsReadback, /broker-update-receipt\.json/);
+assert.match(windowsReadback, /StateDir = 'D:\\GitEdge\\runner-state'/);
+assert.match(windowsReadback, /Join-Path \$target\.StateDir 'active\.lock'/);
+assert.match(windowsReadback, /Runner broker state is busy/);
+assert.match(windowsReadback, /CreationDate/);
+assert.match(windowsReadback, /stableRunningSeconds/);
+assert.doesNotMatch(windowsReadback, /Remove-Item|Stop-Process|Stop-ScheduledTask|Start-ScheduledTask/);
 const initialOid = "a".repeat(40);
 const commitOid = "b".repeat(40);
 const calls = [];
