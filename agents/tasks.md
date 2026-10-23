@@ -15,6 +15,7 @@
 | 010 | [BugFix] VerifySourceArchiveParentEntries | 接受合法 xcarchive 显式父目录项并拒绝额外目录 | 真实归档带有目录记录 | ✅ 已完成 |
 | 011 | [BugFix] NavigationBar | 清理 Apple 底栏栏目布局并将返回/刷新/分享移入顶部更多菜单 | 真机确认原有控件挤压栏目按钮 | ✅ 已完成 |
 | 012 | [Investigation] WebViewBlackScreen | 对照启动方式下黑屏与正常显示证据并记录验收建议 | 宿主进程仍前台存活但页面不可见 | ✅ 已完成 |
-| 013 | [Ops] GitEdgeiOSSigning | 将 iOS 签名请求迁移到 GitEdge 原生来源工件合同 | 完成旧签名执行器退役准备 | 🔄 进行中 |
-| 014 | [Ops] GitEdgeMaintenanceController | 在正确 Android 仓库中安装固定的一次性主机维护 controller | 使用授权的 Runner API 凭据执行主机验收 | 🔄 进行中 |
+| 013 | [Ops] GitEdgeiOSSigning | 将 iOS 签名请求迁移到 GitEdge 原生来源工件合同 | 完成旧签名执行器退役准备 | ✅ 生产签名与独立IPA验证通过 |
+| 014 | [Ops] GitEdgeMaintenanceController | 在正确 Android 仓库中安装固定的一次性主机维护 controller | 使用授权的 Runner API 凭据执行主机验收 | ✅ 验收完成，一次性控制器及自有更新任务已清理 |
 | 015 | [Feature] CompleteGitEdgeIOSSigningWorkflow | 等待 GitEdge iOS 签名完成，下载并验证 IPA 后发布验收产物 | 让自动签名链路以本地既有验证器验收并输出可安装产物 | ✅ 已完成 |
+| 017 | [Ops] Signing cutover finalize | Remove completed temporary maintenance workflows and retain production verification records | Finish the verified GitEdge signing migration without affecting active jobs | ✅ 已完成 |
