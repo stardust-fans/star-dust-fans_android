@@ -1,6 +1,5 @@
 $ErrorActionPreference = 'Stop'
 $revision = '4c94799660f698dc5a65ae933ded9ffda5c4cd79'
-$stageNotBefore = [datetimeoffset]::Parse('2026-10-23T00:30:14.743Z')
 $expectedNode = 'D:\GitHubActions\tools\node-v24.22.0-win-x64\node.exe'
 $targets = @(
   @{ Root = 'D:\GitEdge\runner-broker'; StateDir = 'D:\GitEdge\runner-state'; BrokerTask = 'GitEdgeRunnerBroker'; Suffix = '1'; PreviousPid = 97244 },
@@ -28,21 +27,13 @@ function Test-Broker([object]$process, [hashtable]$target) {
   return $si + 1 -lt $tokens.Count -and [string]::Equals([string]$tokens[$si + 1], 'serve', [StringComparison]::OrdinalIgnoreCase) -and $di -gt $si + 1 -and $di + 1 -lt $tokens.Count -and [string]::Equals([string]$tokens[$di + 1], $target.StateDir, [StringComparison]::OrdinalIgnoreCase)
 }
 
-function Get-Snapshot([hashtable]$target) {
-  $task = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
-  $processes = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { Test-Broker $_ $target } | ForEach-Object {
-    [ordered]@{ pid = [int]$_.ProcessId; startedAt = ([datetime]$_.CreationDate).ToUniversalTime().ToString('o') }
-  })
-  [pscustomobject]@{ taskState = $task.State.ToString(); processes = $processes }
-}
-
-$reports = foreach ($target in $targets) {
+foreach ($target in $targets) {
   $root = $target.Root
   $receiptPath = Join-Path $root 'work\broker-update-receipt.json'
   $lockPath = Join-Path $target.StateDir 'active.lock'
   $stderrPath = Join-Path (Join-Path $root 'work\ops') ('broker-update-' + $revision.Substring(0, 12) + '-logged-' + $target.Suffix + '.err.log')
   $helperName = 'GitEdgeBrokerUpdate-f929b6164fe5-' + $target.Suffix
-  $report = [ordered]@{ root = $root; stateDir = $target.StateDir; actualHEAD = $null; headExitCode = $null; receipt = $null; brokerTask = $null; helperTask = $null; process = $null; exactProcessCount = 0; previousPid = $target.PreviousPid; oldBrokerProcessStillPresent = $null; stateLock = $null; stateLockOwnedByProcess = $null; stderrBusyFlag = $null; stableRunningSeconds = 0 }
+  $report = [ordered]@{ root = $root; stateDir = $target.StateDir; actualHEAD = $null; headExitCode = $null; receiptStatus = $null; receiptRevision = $null; receiptPrevious = $null; receiptCompletedAt = $null; stoppedBrokerPid = $null; receiptBrokerPid = $null; receiptBrokerStartedAt = $null; receiptStableSeconds = $null; failureCategory = $null; brokerTaskState = $null; brokerTaskResult = $null; helperTaskState = $null; helperTaskResult = $null; processCount = 0; processPid = $null; processStartedAt = $null; oldProcessStillPresent = $null; lockExists = $false; lockPid = $null; lockAction = $null; lockStartedAt = $null; lockOwnedByProcess = $false; stderrBusyFlag = $false }
   try {
     $head = @(& git -c "safe.directory=$root" -c 'credential.helper=' -c 'core.askPass=' -C $root rev-parse HEAD 2>&1)
     $report.headExitCode = $LASTEXITCODE
@@ -51,62 +42,44 @@ $reports = foreach ($target in $targets) {
   try {
     if (Test-Path -LiteralPath $receiptPath -PathType Leaf) {
       $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json -ErrorAction Stop
-      $report.receipt = [ordered]@{ exists = $true; status = $receipt.status; revision = $receipt.revision; previous = $receipt.previous; completedAt = $receipt.completedAt; stoppedBrokerPid = $receipt.stoppedBrokerPid; brokerProcess = $receipt.brokerProcess; brokerTaskStableSeconds = $receipt.brokerTaskStableSeconds; externalHeartbeat = $receipt.externalHeartbeat; failureCategory = $receipt.message }
-    } else { $report.receipt = [ordered]@{ exists = $false } }
-  } catch { $report.receipt = [ordered]@{ exists = $true; parseError = 'invalid JSON' } }
+      $report.receiptStatus = $receipt.status; $report.receiptRevision = $receipt.revision; $report.receiptPrevious = $receipt.previous
+      $report.receiptCompletedAt = $receipt.completedAt; $report.stoppedBrokerPid = $receipt.stoppedBrokerPid
+      $report.receiptBrokerPid = $receipt.brokerProcess.pid; $report.receiptBrokerStartedAt = $receipt.brokerProcess.startedAt
+      $report.receiptStableSeconds = $receipt.brokerTaskStableSeconds
+      $report.failureCategory = $receipt.message
+    } else { $report.receiptStatus = 'missing' }
+  } catch { $report.receiptStatus = 'invalid' }
   try {
     $info = Get-ScheduledTaskInfo -TaskName $target.BrokerTask -ErrorAction Stop
-    $report.brokerTask = [ordered]@{ name = $target.BrokerTask; state = (Get-ScheduledTask -TaskName $target.BrokerTask).State.ToString(); lastTaskResult = $info.LastTaskResult; lastRunTime = $info.LastRunTime }
-  } catch { $report.brokerTask = [ordered]@{ name = $target.BrokerTask; error = 'unavailable' } }
+    $report.brokerTaskState = (Get-ScheduledTask -TaskName $target.BrokerTask).State.ToString(); $report.brokerTaskResult = $info.LastTaskResult
+  } catch { $report.brokerTaskState = 'unavailable' }
   try {
     $helperInfo = Get-ScheduledTaskInfo -TaskName $helperName -ErrorAction Stop
-    $report.helperTask = [ordered]@{ name = $helperName; state = (Get-ScheduledTask -TaskName $helperName).State.ToString(); lastTaskResult = $helperInfo.LastTaskResult; lastRunTime = $helperInfo.LastRunTime }
-  } catch { $report.helperTask = [ordered]@{ name = $helperName; error = 'unavailable' } }
+    $report.helperTaskState = (Get-ScheduledTask -TaskName $helperName -ErrorAction Stop).State.ToString(); $report.helperTaskResult = $helperInfo.LastTaskResult
+  } catch { $report.helperTaskState = 'unavailable' }
   try {
     if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
       $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json -ErrorAction Stop
-      $report.stateLock = [ordered]@{ exists = $true; pid = $lock.pid; action = $lock.action; startedAt = $lock.startedAt }
-    } else { $report.stateLock = [ordered]@{ exists = $false } }
-  } catch { $report.stateLock = [ordered]@{ exists = $true; parseError = 'invalid JSON' } }
+      $report.lockExists = $true; $report.lockPid = $lock.pid; $report.lockAction = $lock.action; $report.lockStartedAt = $lock.startedAt
+    }
+  } catch { $report.lockExists = $true; $report.lockAction = 'invalid' }
   try {
-    $report.stderrBusyFlag = if (Test-Path -LiteralPath $stderrPath -PathType Leaf) { (Select-String -LiteralPath $stderrPath -Pattern 'Runner broker state is busy' -Quiet) } else { $false }
-  } catch { $report.stderrBusyFlag = $null }
+    $report.stderrBusyFlag = [bool]((Test-Path -LiteralPath $stderrPath -PathType Leaf) -and (Select-String -LiteralPath $stderrPath -Pattern 'Runner broker state is busy' -Quiet))
+  } catch { $report.stderrBusyFlag = $false }
   try {
-    if ($report.receipt?.stoppedBrokerPid) {
-      $old = Get-CimInstance Win32_Process -Filter ('ProcessId=' + [int]$report.receipt.stoppedBrokerPid) -ErrorAction SilentlyContinue
-      $report.oldBrokerProcessStillPresent = [bool]($old -and (Test-Broker $old $target))
-    } else { $report.oldBrokerProcessStillPresent = $null }
-  } catch { $report.oldBrokerProcessStillPresent = $null }
-  $report
+    $all = @(Get-CimInstance Win32_Process -ErrorAction Stop)
+    $matched = [System.Collections.Generic.List[object]]::new()
+    foreach ($candidate in $all) { if (Test-Broker $candidate $target) { $matched.Add($candidate) } }
+    $report.processCount = $matched.Count
+    $expectedPid = if ($report.receiptStatus -eq 'success' -and $report.receiptBrokerPid) { [int]$report.receiptBrokerPid } else { 0 }
+    $current = @($matched | Where-Object { ($expectedPid -and [int]$_.ProcessId -eq $expectedPid) -or (-not $expectedPid -and [int]$_.ProcessId -ne $target.PreviousPid) })
+    if ($current.Count -eq 1) {
+      $report.processPid = [int]$current[0].ProcessId
+      $report.processStartedAt = ([datetime]$current[0].CreationDate).ToUniversalTime().ToString('o')
+      $report.lockOwnedByProcess = [bool]($report.lockExists -and $report.lockPid -eq $report.processPid -and $report.lockAction -eq 'serve')
+    }
+    $old = @($matched | Where-Object { [int]$_.ProcessId -eq $target.PreviousPid })
+    $report.oldProcessStillPresent = ($old.Count -gt 0)
+  } catch { $report.processCount = -1 }
+  [Console]::WriteLine(($report | ConvertTo-Json -Compress -Depth 3))
 }
-
-$stableSince = @{}
-$lastIdentity = @{}
-$deadline = (Get-Date).AddSeconds(45)
-do {
-  foreach ($target in $targets) {
-    $entry = @($reports | Where-Object root -eq $target.Root)[0]
-    try {
-      $snapshot = Get-Snapshot $target
-      $eligible = @($snapshot.processes | Where-Object { $_.pid -ne $target.PreviousPid -and [datetimeoffset]::Parse($_.startedAt) -ge $stageNotBefore })
-      if ($entry.receipt.status -eq 'success' -and $entry.receipt.brokerProcess) {
-        $expected = $entry.receipt.brokerProcess
-        $eligible = @($eligible | Where-Object { $_.pid -eq $expected.pid -and $_.startedAt -eq $expected.startedAt })
-      }
-      $match = $eligible
-      $healthy = $entry.actualHEAD -eq $revision -and $snapshot.taskState -eq 'Running' -and $match.Count -eq 1
-      $identity = if ($healthy) { "$($match[0].pid)|$($match[0].startedAt)" } else { $null }
-      if ($identity -and $lastIdentity[$target.Root] -eq $identity) { } else { $lastIdentity[$target.Root] = $identity; $stableSince[$target.Root] = if ($identity) { Get-Date } else { $null } }
-      $entry.brokerTask.state = $snapshot.taskState
-      $entry.exactProcessCount = $snapshot.processes.Count
-      $entry.process = if ($match.Count -eq 1) { $match[0] } elseif ($snapshot.processes.Count -eq 0) { $null } else { [ordered]@{ exactProcessCount = $snapshot.processes.Count } }
-      $entry.stateLockOwnedByProcess = [bool]($match.Count -eq 1 -and $entry.stateLock.exists -and $entry.stateLock.pid -eq $match[0].pid -and $entry.stateLock.action -eq 'serve')
-    } catch { $lastIdentity[$target.Root] = $null; $stableSince[$target.Root] = $null }
-  }
-  if ($targets | Where-Object { -not $stableSince[$_.Root] -or ((Get-Date) - $stableSince[$_.Root]).TotalSeconds -lt 45 }) { Start-Sleep -Seconds 1 }
-} while ((Get-Date) -lt $deadline -and ($targets | Where-Object { -not $stableSince[$_.Root] -or ((Get-Date) - $stableSince[$_.Root]).TotalSeconds -lt 45 }))
-foreach ($target in $targets) {
-  $entry = @($reports | Where-Object root -eq $target.Root)[0]
-  if ($stableSince[$target.Root]) { $entry.stableRunningSeconds = [int][Math]::Floor(((Get-Date) - $stableSince[$target.Root]).TotalSeconds) }
-}
-$reports | ConvertTo-Json -Depth 8 -Compress

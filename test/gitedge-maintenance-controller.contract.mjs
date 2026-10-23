@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "b404250d632d9dfa955388f9dbe42b688fa8a8d41ba7f6c670018fdcdbc96b0b",
+  "9a9227665733ffa95ae65300ad53767bc1cccf2b1960a4a0562310982e2f82c1",
 ]);
 const windowsReadback = payloadBytes[0].toString("utf8");
 assert.match(windowsReadback, /broker-update-receipt\.json/);
@@ -40,7 +40,10 @@ assert.match(windowsReadback, /StateDir = 'D:\\GitEdge\\runner-state'/);
 assert.match(windowsReadback, /Join-Path \$target\.StateDir 'active\.lock'/);
 assert.match(windowsReadback, /Runner broker state is busy/);
 assert.match(windowsReadback, /CreationDate/);
-assert.match(windowsReadback, /stableRunningSeconds/);
+assert.match(windowsReadback, /processPid/);
+assert.match(windowsReadback, /receiptStableSeconds/);
+assert.match(windowsReadback, /\[Console\]::WriteLine\(\(\$report \| ConvertTo-Json -Compress -Depth 3\)\)/);
+assert.doesNotMatch(windowsReadback, /\$deadline|Start-Sleep/);
 assert.doesNotMatch(windowsReadback, /Remove-Item|Stop-Process|Stop-ScheduledTask|Start-ScheduledTask/);
 const initialOid = "a".repeat(40);
 const commitOid = "b".repeat(40);
