@@ -195,6 +195,7 @@ foreach ($target in $targets) {
     $report.brokerProcesses = [ordered]@{ count = $processes.Count; imageCounts = $counts; commandCategoryCounts = $categoryCounts }
     $runtimeProcesses = @($processes | Where-Object { [string]$_.CommandLine -match '(?i)runner-broker\.mjs' -and ([string]$_.Name -match '(?i)^node(?:\.exe)?$') })
     $expectedBrokerScript = Join-Path $target.Root 'scripts\runner-broker.mjs'
+    $expectedNode = 'D:\GitHubActions\tools\node-v24.22.0-win-x64\node.exe'
     $expectedRuntime = if ($target.Suffix -eq '1') {
       [ordered]@{ processId = 97244; startedAtUtc = '2026-10-22T18:07:22.2329430Z' }
     } else {
@@ -202,19 +203,31 @@ foreach ($target in $targets) {
     }
     $report.brokerRuntimeProcess = @($runtimeProcesses | ForEach-Object {
       $argv = @(Get-SafeArgv ([string]$_.CommandLine))
-      $scriptPath = if ($argv.Count -gt 1) { [string]$argv[1] } else { $null }
+      $scriptIndexes = @(for ($index = 1; $index -lt $argv.Count; $index++) {
+        if ([string]::Equals([string]$argv[$index], $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)) { $index }
+      })
       $startedAt = try { ([datetime]$_.CreationDate).ToUniversalTime().ToString('o') } catch { $null }
       $startedAtUtc = try { [datetimeoffset]::Parse([string]$startedAt).UtcDateTime } catch { $null }
       $receiptTime = try { [datetimeoffset]::Parse([string]$receipt.completedAt).UtcDateTime } catch { $null }
       $startRelation = if ($null -eq $receiptTime -or $null -eq $startedAtUtc) { 'unknown' } elseif ($startedAtUtc -lt $receiptTime) { 'before_update_receipt' } else { 'at_or_after_update_receipt' }
       $expectedTime = [datetimeoffset]::Parse([string]$expectedRuntime.startedAtUtc).UtcDateTime
       $exactIdentity = $_.ProcessId -eq $expectedRuntime.processId -and $startedAtUtc -eq $expectedTime
-      $validArgv = $argv.Count -eq 5 -and
-        [string]::Equals([IO.Path]::GetFileName([string]$argv[0]), 'node.exe', [StringComparison]::OrdinalIgnoreCase) -and
-        [string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase) -and
-        [string]::Equals([string]$argv[2], 'serve', [StringComparison]::OrdinalIgnoreCase) -and
-        [string]::Equals([string]$argv[3], '--state-dir', [StringComparison]::OrdinalIgnoreCase)
-      $stateArgument = if ($validArgv) { [string]$argv[4] } else { $null }
+      $stateIndexes = @(for ($index = 0; $index -lt $argv.Count; $index++) {
+        if ([string]::Equals([string]$argv[$index], '--state-dir', [StringComparison]::OrdinalIgnoreCase)) { $index }
+      })
+      $unsafeEntryPoint = @($argv | Where-Object { $_ -match '^(?i)(?:-e|--eval|-p|--print|-r|--require|--import|--loader|--experimental-loader)(?:=|$)' }).Count -gt 0
+      $scriptIndex = if ($scriptIndexes.Count -eq 1) { [int]$scriptIndexes[0] } else { -1 }
+      $stateIndex = if ($stateIndexes.Count -eq 1) { [int]$stateIndexes[0] } else { -1 }
+      $validArgv =
+        [string]::Equals([string]$_.ExecutablePath, $expectedNode, [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals([string]$argv[0], $expectedNode, [StringComparison]::OrdinalIgnoreCase) -and
+        -not $unsafeEntryPoint -and
+        $scriptIndex -gt 0 -and
+        $scriptIndex + 1 -lt $argv.Count -and
+        [string]::Equals([string]$argv[$scriptIndex + 1], 'serve', [StringComparison]::OrdinalIgnoreCase) -and
+        $stateIndex -gt $scriptIndex + 1 -and
+        $stateIndex + 1 -lt $argv.Count
+      $stateArgument = if ($validArgv) { [string]$argv[$stateIndex + 1] } else { $null }
       $stateSegments = if ($stateArgument) { @($stateArgument -split '[\\/]') } else { @() }
       $safeStatePath = $stateArgument -and [IO.Path]::IsPathRooted($stateArgument) -and
         $stateArgument.StartsWith('D:\GitEdge\', [StringComparison]::OrdinalIgnoreCase) -and
@@ -227,8 +240,7 @@ foreach ($target in $targets) {
         image = $_.Name
         executablePath = $_.ExecutablePath
         expectedScriptPath = $expectedBrokerScript
-        scriptPathMatchesExpected = [string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)
-        scriptPath = if ([string]::Equals($scriptPath, $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)) { $scriptPath } else { $null }
+        scriptPathMatchesExpected = ($scriptIndexes.Count -eq 1)
         hasServeArgument = $validArgv
         stateDirectoryIdentityMatchesKnownProcess = $exactIdentity -and $validArgv
         stateDirectory = $stateDirectory

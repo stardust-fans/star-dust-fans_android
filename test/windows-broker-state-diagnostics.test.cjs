@@ -42,6 +42,12 @@ test('only the previously observed exact broker process exposes its state direct
   assert.match(source, /stateDirectory = \$stateDirectory/);
   assert.match(source, /stateDirectoryUniqueAcrossRoots/);
   assert.match(source, /StartsWith\('D:\\GitEdge\\'/);
-  assert.match(source, /argv\.Count -eq 5/);
+  assert.match(source, /scriptIndexes\.Count -eq 1/);
+  assert.match(source, /stateIndexes\.Count -eq 1/);
+  assert.match(source, /stateIndex \+ 1/);
+  assert.match(source, /\$expectedNode = 'D:\\GitHubActions\\tools\\node-v24\.22\.0-win-x64\\node\.exe'/);
+  assert.match(source, /\$unsafeEntryPoint/);
+  assert.match(source, /--experimental-loader/);
+  assert.doesNotMatch(source, /argv\.Count -eq 5/);
   assert.doesNotMatch(source, /Write-Output.*CommandLine|argv = \$argv/);
 });

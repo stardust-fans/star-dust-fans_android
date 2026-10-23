@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "25392bbc7043cfc5a580cafbaaa48290ac52b7cf8d9c35648bfe5a22996b4b9a",
+  "3bcda83104ffce52193d7c4dbf57b11337a1e23369a21f9d6e64ce3021b470d4",
 ]);
 const windowsDiagnostics = payloadBytes[0].toString("utf8");
 assert.match(windowsDiagnostics, /safe\.directory=\$\(\$target\.Root\)/);
@@ -50,7 +50,10 @@ assert.match(windowsDiagnostics, /unclassified/);
 assert.match(windowsDiagnostics, /stateDirectoryIdentityMatchesKnownProcess/);
 assert.match(windowsDiagnostics, /stateDirectoryUniqueAcrossRoots/);
 assert.match(windowsDiagnostics, /D:\\GitEdge\\/);
-assert.match(windowsDiagnostics, /argv\.Count -eq 5/);
+assert.match(windowsDiagnostics, /D:\\GitHubActions\\tools\\node-v24\.22\.0-win-x64\\node\.exe/);
+assert.match(windowsDiagnostics, /unsafeEntryPoint/);
+assert.match(windowsDiagnostics, /scriptIndexes\.Count -eq 1/);
+assert.match(windowsDiagnostics, /stateIndexes\.Count -eq 1/);
 assert.match(windowsDiagnostics, /processId = \$_.ProcessId/);
 assert.match(windowsDiagnostics, /envFileBasenames/);
 assert.match(windowsDiagnostics, /usesWaitSwitch/);
