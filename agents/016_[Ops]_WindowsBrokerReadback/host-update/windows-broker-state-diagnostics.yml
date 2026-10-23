@@ -222,7 +222,7 @@ jobs:
                 [ordered]@{ processId = 98104; startedAtUtc = '2026-10-22T18:07:33.1104330Z' }
               }
               $report.brokerRuntimeProcess = @($runtimeProcesses | ForEach-Object {
-                $argv = @(Get-SafeArgv ([string]$_.CommandLine))
+                $argv = Get-SafeArgv ([string]$_.CommandLine)
                 $scriptIndexes = @(for ($index = 1; $index -lt $argv.Count; $index++) {
                   if ([string]::Equals([string]$argv[$index], $expectedBrokerScript, [StringComparison]::OrdinalIgnoreCase)) { $index }
                 })

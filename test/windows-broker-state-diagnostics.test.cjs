@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const { spawnSync } = require('node:child_process');
 
 const taskPath = path.join(__dirname, '..', 'agents', '016_[Ops]_WindowsBrokerReadback', 'host-update');
 
@@ -49,9 +50,18 @@ test('only the previously observed exact broker process exposes its state direct
   assert.match(source, /\$unsafeEntryPoint/);
   assert.match(source, /--experimental-loader/);
   assert.match(source, /argvTokenCount = \$argv\.Count/);
+  assert.match(source, /\$argv = Get-SafeArgv \(/);
+  assert.doesNotMatch(source, /\$argv = @\(Get-SafeArgv/);
   assert.match(source, /nodeExecutableMatchesExpected = \$nodePathMatches/);
   assert.match(source, /brokerScriptMatchCount = \$scriptIndexes\.Count/);
   assert.match(source, /stateDirectoryFlagCount = \$stateIndexes\.Count/);
   assert.doesNotMatch(source, /argv\.Count -eq 5/);
   assert.doesNotMatch(source, /Write-Output.*CommandLine|argv = \$argv/);
+});
+
+test('PowerShell argument tokenizer returns a flat five-token broker argv', (context) => {
+  const result = spawnSync('pwsh', ['-NoProfile', '-File', path.join(__dirname, 'windows-broker-state-argv.test.ps1')], { encoding: 'utf8' });
+  if (result.error?.code === 'ENOENT') return context.skip('pwsh is unavailable');
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /five broker arguments/);
 });

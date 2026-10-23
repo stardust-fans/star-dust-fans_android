@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "e35b10b9a93e63faf6cf6457b00135deb2b367d75f2401e8dc25b45ad90fdcb1",
+  "dd9a88fa8edbbc883304901268fc643594a4ad36ff0140a8a22d9007267341da",
 ]);
 const windowsDiagnostics = payloadBytes[0].toString("utf8");
 assert.match(windowsDiagnostics, /safe\.directory=\$\(\$target\.Root\)/);
@@ -42,6 +42,7 @@ assert.match(windowsDiagnostics, /lastTaskResult = \$brokerInfo\.LastTaskResult/
 assert.match(windowsDiagnostics, /commandCategoryCounts/);
 assert.match(windowsDiagnostics, /Get-LogFlags/);
 assert.match(windowsDiagnostics, /Get-SafeArgv/);
+assert.match(windowsDiagnostics, /\$argv = Get-SafeArgv \(/);
 assert.match(windowsDiagnostics, /startRelationToUpdateReceipt/);
 assert.match(windowsDiagnostics, /\[datetimeoffset\]::Parse/);
 assert.match(windowsDiagnostics, /singleton_lock/);
