@@ -21,7 +21,7 @@ jobs:
             @{ Root = 'D:\GitEdge\runner-broker'; BrokerTask = 'GitEdgeRunnerBroker'; Suffix = '1' },
             @{ Root = 'D:\GitEdge\runner-broker-2'; BrokerTask = 'GitEdgeRunnerBroker-2'; Suffix = '2' }
           )
-          
+
           function Get-MessageCategory([string]$Text) {
             if ($Text -match '(?i)(dubious ownership|safe\.directory)') { return 'git_trust' }
             if ($Text -match '(?i)(cannot find module|module not found|err_module_not_found)') { return 'module_missing' }
@@ -37,12 +37,12 @@ jobs:
             if ([string]::IsNullOrWhiteSpace($Text)) { return 'none' }
             return 'other'
           }
-          
+
           function Get-Sid([string]$Principal) {
             if ($Principal -match '^S-\d-') { return [System.Security.Principal.SecurityIdentifier]::new($Principal) }
             return ([System.Security.Principal.NTAccount]::new($Principal)).Translate([System.Security.Principal.SecurityIdentifier])
           }
-          
+
           function Get-SafeArgv([string]$Arguments) {
             $tokens = @([regex]::Matches($Arguments, '"([^"]*)"|(\S+)') | ForEach-Object {
               if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value }
@@ -81,7 +81,11 @@ jobs:
             }
             return ,$safe
           }
-          
+
+          function Get-NormalizedPath([string]$Value) {
+            try { return [IO.Path]::GetFullPath($Value).TrimEnd('\').Replace('/', '\') } catch { return '' }
+          }
+
           function Get-LogFlags([string]$Path) {
             if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return [ordered]@{ present = $false } }
             $counts = [ordered]@{ git_trust = 0; module_missing = 0; singleton_lock = 0; port_conflict = 0; process_crash = 0; process_launch_failed = 0; process_exit_nonzero = 0; lease_lock_error = 0; enoent = 0; permission = 0; service_start_failed = 0; unclassified = 0 }
@@ -93,7 +97,7 @@ jobs:
             }
             return [ordered]@{ present = $true; nonEmpty = ($lines.Count -gt 0); lineCount = $lines.Count; categoryCounts = $counts }
           }
-          
+
           $reports = @()
           foreach ($target in $targets) {
             $helperName = 'GitEdgeBrokerUpdate-' + $shortRevision + '-' + $target.Suffix
@@ -123,7 +127,7 @@ jobs:
                 }
               } catch { $report.receipt = [ordered]@{ exists = $true; parseError = 'invalid_json' } }
             } else { $report.receipt = [ordered]@{ exists = $false } }
-          
+
             $headOutput = @(& git -c "safe.directory=$($target.Root)" -C $target.Root rev-parse HEAD 2>$null)
             $headExitCode = $LASTEXITCODE
             $statusOutput = @(& git -c "safe.directory=$($target.Root)" -C $target.Root status --porcelain --untracked-files=no 2>$null)
@@ -134,7 +138,7 @@ jobs:
               statusExitCode = $statusExitCode
               trackedChangedFileCount = if ($statusExitCode -eq 0) { @($statusOutput).Count } else { $null }
             }
-          
+
             try {
               $broker = Get-ScheduledTask -TaskName $target.BrokerTask -ErrorAction Stop
               $brokerInfo = Get-ScheduledTaskInfo -TaskName $target.BrokerTask -ErrorAction Stop
@@ -175,7 +179,7 @@ jobs:
                 $report.launcherScript = [ordered]@{ path = $expectedLauncher; fileExists = $false; actionMatchesExpected = [string]::Equals($launcherPath, $expectedLauncher, [StringComparison]::OrdinalIgnoreCase) }
               }
             } catch { $report.brokerTask = [ordered]@{ available = $false; category = 'task_query_failed' } }
-          
+
             try {
               $helper = Get-ScheduledTask -TaskName $helperName -ErrorAction Stop
               $helperInfo = Get-ScheduledTaskInfo -TaskName $helperName -ErrorAction Stop
@@ -186,7 +190,7 @@ jobs:
                 actions = @($helper.Actions | ForEach-Object { [ordered]@{ executePath = $_.Execute; argv = Get-SafeArgv ([string]$_.Arguments) } })
               }
             } catch { $report.updaterTask = [ordered]@{ available = $false; category = 'task_query_failed' } }
-          
+
             try {
               $categoryCounts = [ordered]@{ broker_runtime = 0; node_other = 0; powershell = 0; git = 0; other = 0 }
               $rootPattern = [regex]::Escape($target.Root.TrimEnd('\')) + '(?:\\|"|\s|$)'
@@ -234,9 +238,10 @@ jobs:
                 $unsafeEntryPoint = @($argv | Where-Object { $_ -match '^(?i)(?:-e|--eval|-p|--print|-r|--require|--import|--loader|--experimental-loader)(?:=|$)' }).Count -gt 0
                 $scriptIndex = if ($scriptIndexes.Count -eq 1) { [int]$scriptIndexes[0] } else { -1 }
                 $stateIndex = if ($stateIndexes.Count -eq 1) { [int]$stateIndexes[0] } else { -1 }
+                $nodePathMatches = (Get-NormalizedPath ([string]$_.ExecutablePath)) -eq (Get-NormalizedPath $expectedNode) -and
+                  (Get-NormalizedPath ([string]$argv[0])) -eq (Get-NormalizedPath $expectedNode)
                 $validArgv =
-                  [string]::Equals([string]$_.ExecutablePath, $expectedNode, [StringComparison]::OrdinalIgnoreCase) -and
-                  [string]::Equals([string]$argv[0], $expectedNode, [StringComparison]::OrdinalIgnoreCase) -and
+                  $nodePathMatches -and
                   -not $unsafeEntryPoint -and
                   $scriptIndex -gt 0 -and
                   $scriptIndex + 1 -lt $argv.Count -and
@@ -254,6 +259,12 @@ jobs:
                   startedAtUtc = $startedAt
                   startRelationToUpdateReceipt = $startRelation
                   image = $_.Name
+                  argvTokenCount = $argv.Count
+                  nodeExecutableMatchesExpected = $nodePathMatches
+                  brokerScriptMatchCount = $scriptIndexes.Count
+                  serveFollowsBrokerScript = ($scriptIndex -gt 0 -and $scriptIndex + 1 -lt $argv.Count -and [string]::Equals([string]$argv[$scriptIndex + 1], 'serve', [StringComparison]::OrdinalIgnoreCase))
+                  stateDirectoryFlagCount = $stateIndexes.Count
+                  unsafeEntryPoint = $unsafeEntryPoint
                   executablePath = $_.ExecutablePath
                   expectedScriptPath = $expectedBrokerScript
                   scriptPathMatchesExpected = ($scriptIndexes.Count -eq 1)
@@ -264,7 +275,7 @@ jobs:
                 }
               })
             } catch { $report.brokerProcesses = [ordered]@{ available = $false; category = 'process_query_failed' } }
-          
+
             $logDir = Join-Path $target.Root 'work\logs'
             $opsDir = Join-Path $target.Root 'work\ops'
             $report.serviceLogs = [ordered]@{

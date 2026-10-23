@@ -10,7 +10,7 @@ test('fixed Windows diagnostics are read-only and redact host process arguments'
   const workflow = fs.readFileSync(path.join(taskPath, 'windows-broker-state-diagnostics.yml'), 'utf8');
   const runLine = workflow.split(/\r?\n/).indexOf('        run: |');
   const embedded = workflow.split(/\r?\n/).slice(runLine + 1).map((line) => line.startsWith('          ') ? line.slice(10) : line).join('\n').trimEnd();
-  assert.equal(embedded.replaceAll('\r\n', '\n'), source.trimEnd().replaceAll('\r\n', '\n'));
+  assert.equal(embedded.replaceAll('\r\n', '\n').replaceAll(/\n +(?=\n)/g, '\n'), source.trimEnd().replaceAll('\r\n', '\n'));
   assert.match(source, /lastTaskResult = \$brokerInfo\.LastTaskResult/);
   assert.match(source, /currentUserMatchesPrincipal = \(\$currentSid -eq \$brokerSid\)/);
   assert.match(source, /commandCategoryCounts/);
@@ -48,6 +48,10 @@ test('only the previously observed exact broker process exposes its state direct
   assert.match(source, /\$expectedNode = 'D:\\GitHubActions\\tools\\node-v24\.22\.0-win-x64\\node\.exe'/);
   assert.match(source, /\$unsafeEntryPoint/);
   assert.match(source, /--experimental-loader/);
+  assert.match(source, /argvTokenCount = \$argv\.Count/);
+  assert.match(source, /nodeExecutableMatchesExpected = \$nodePathMatches/);
+  assert.match(source, /brokerScriptMatchCount = \$scriptIndexes\.Count/);
+  assert.match(source, /stateDirectoryFlagCount = \$stateIndexes\.Count/);
   assert.doesNotMatch(source, /argv\.Count -eq 5/);
   assert.doesNotMatch(source, /Write-Output.*CommandLine|argv = \$argv/);
 });

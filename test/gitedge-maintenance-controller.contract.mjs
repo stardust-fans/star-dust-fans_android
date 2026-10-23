@@ -32,7 +32,7 @@ assert.deepEqual(files.map((file) => file.path), [
 ]);
 const payloadBytes = files.map((file) => gunzipSync(Buffer.from(file.payload, "hex")));
 assert.deepEqual(payloadBytes.map((bytes) => createHash("sha256").update(bytes).digest("hex")), [
-  "3bcda83104ffce52193d7c4dbf57b11337a1e23369a21f9d6e64ce3021b470d4",
+  "e35b10b9a93e63faf6cf6457b00135deb2b367d75f2401e8dc25b45ad90fdcb1",
 ]);
 const windowsDiagnostics = payloadBytes[0].toString("utf8");
 assert.match(windowsDiagnostics, /safe\.directory=\$\(\$target\.Root\)/);
@@ -52,6 +52,8 @@ assert.match(windowsDiagnostics, /stateDirectoryUniqueAcrossRoots/);
 assert.match(windowsDiagnostics, /D:\\GitEdge\\/);
 assert.match(windowsDiagnostics, /D:\\GitHubActions\\tools\\node-v24\.22\.0-win-x64\\node\.exe/);
 assert.match(windowsDiagnostics, /unsafeEntryPoint/);
+assert.match(windowsDiagnostics, /brokerScriptMatchCount/);
+assert.match(windowsDiagnostics, /stateDirectoryFlagCount/);
 assert.match(windowsDiagnostics, /scriptIndexes\.Count -eq 1/);
 assert.match(windowsDiagnostics, /stateIndexes\.Count -eq 1/);
 assert.match(windowsDiagnostics, /processId = \$_.ProcessId/);

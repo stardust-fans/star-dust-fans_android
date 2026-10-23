@@ -66,6 +66,10 @@ function Get-SafeArgv([string]$Arguments) {
   return ,$safe
 }
 
+function Get-NormalizedPath([string]$Value) {
+  try { return [IO.Path]::GetFullPath($Value).TrimEnd('\').Replace('/', '\') } catch { return '' }
+}
+
 function Get-LogFlags([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return [ordered]@{ present = $false } }
   $counts = [ordered]@{ git_trust = 0; module_missing = 0; singleton_lock = 0; port_conflict = 0; process_crash = 0; process_launch_failed = 0; process_exit_nonzero = 0; lease_lock_error = 0; enoent = 0; permission = 0; service_start_failed = 0; unclassified = 0 }
@@ -218,9 +222,10 @@ foreach ($target in $targets) {
       $unsafeEntryPoint = @($argv | Where-Object { $_ -match '^(?i)(?:-e|--eval|-p|--print|-r|--require|--import|--loader|--experimental-loader)(?:=|$)' }).Count -gt 0
       $scriptIndex = if ($scriptIndexes.Count -eq 1) { [int]$scriptIndexes[0] } else { -1 }
       $stateIndex = if ($stateIndexes.Count -eq 1) { [int]$stateIndexes[0] } else { -1 }
+      $nodePathMatches = (Get-NormalizedPath ([string]$_.ExecutablePath)) -eq (Get-NormalizedPath $expectedNode) -and
+        (Get-NormalizedPath ([string]$argv[0])) -eq (Get-NormalizedPath $expectedNode)
       $validArgv =
-        [string]::Equals([string]$_.ExecutablePath, $expectedNode, [StringComparison]::OrdinalIgnoreCase) -and
-        [string]::Equals([string]$argv[0], $expectedNode, [StringComparison]::OrdinalIgnoreCase) -and
+        $nodePathMatches -and
         -not $unsafeEntryPoint -and
         $scriptIndex -gt 0 -and
         $scriptIndex + 1 -lt $argv.Count -and
@@ -238,6 +243,12 @@ foreach ($target in $targets) {
         startedAtUtc = $startedAt
         startRelationToUpdateReceipt = $startRelation
         image = $_.Name
+        argvTokenCount = $argv.Count
+        nodeExecutableMatchesExpected = $nodePathMatches
+        brokerScriptMatchCount = $scriptIndexes.Count
+        serveFollowsBrokerScript = ($scriptIndex -gt 0 -and $scriptIndex + 1 -lt $argv.Count -and [string]::Equals([string]$argv[$scriptIndex + 1], 'serve', [StringComparison]::OrdinalIgnoreCase))
+        stateDirectoryFlagCount = $stateIndexes.Count
+        unsafeEntryPoint = $unsafeEntryPoint
         executablePath = $_.ExecutablePath
         expectedScriptPath = $expectedBrokerScript
         scriptPathMatchesExpected = ($scriptIndexes.Count -eq 1)
